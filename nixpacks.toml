@@ -1,5 +1,5 @@
-[phases.install]
-cmds = ["pip install -r web_requirements.txt"]
+[phases.setup]
+nixPkgs = ["python311"]
 
 [start]
 cmd = "gunicorn web_ui.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
