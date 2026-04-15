@@ -1,154 +1,98 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>製作進度 — AI 頻道</title>
-<style>
-:root {
-  --bg:#09090b;--surface:#18181b;--surface2:#27272a;--border:#3f3f46;
-  --text:#fafafa;--muted:#71717a;--accent:#7c3aed;--accent-light:#8b5cf6;
-  --accent-bg:#1e1333;--green:#22c55e;--green-bg:#052e16;--amber:#f59e0b;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,"Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;}
-.logo{font-size:15px;font-weight:800;color:var(--accent-light);padding:8px 12px 20px;}
-.logo span{display:block;font-size:10px;font-weight:400;color:var(--muted);margin-top:2px;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;color:var(--muted);text-decoration:none;transition:all .15s;}
-.nav-item:hover{background:var(--surface2);color:var(--text);}
-.nav-item.active{background:var(--accent-bg);color:var(--accent-light);font-weight:600;}
-.nav-icon{font-size:15px;width:18px;text-align:center;}
-.main{overflow-y:auto;}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);}
-.topbar h1{font-size:16px;font-weight:700;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;border:none;transition:all .15s;}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);}
-.btn-outline:hover{border-color:var(--accent);color:var(--accent-light);}
-.content{padding:28px 32px;max-width:680px;}
+{% extends "base.html" %}
+{% block title %}製作進度{% endblock %}
 
-/* Selected info */
-.info-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;}
-.info-card h2{font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text);}
-.info-row{display:flex;flex-direction:column;gap:3px;margin-bottom:12px;}
-.info-row:last-child{margin-bottom:0;}
-.info-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
-.info-val{font-size:14px;color:#d4d4d8;line-height:1.5;}
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>製作進度</h1>
+    {% if status.date %}<span class="sub">{{ status.date }}</span>{% endif %}
+  </div>
+  <div class="topbar-actions">
+    <a href="/" class="btn btn-ghost">← 返回選題</a>
+  </div>
+</div>
 
-/* Pipeline */
-.pipeline{display:flex;flex-direction:column;gap:2px;}
-.step{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:12px;transition:background .15s;}
-.step-dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.step-info .name{font-size:14px;font-weight:600;}
-.step-info .desc{font-size:12px;color:var(--muted);margin-top:2px;}
+<div class="content">
 
-.step.done .step-dot{background:var(--green-bg);box-shadow:0 0 0 1px #14532d;}
-.step.done .name{color:var(--green);}
-.step.active{background:var(--accent-bg);border:1px solid var(--accent);}
-.step.active .step-dot{background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent);animation:pulse 1.6s infinite;}
-.step.active .name{color:var(--accent-light);}
-.step.pending .step-dot{background:var(--surface2);}
-.step.pending .name{color:var(--muted);}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  {% if status.error_msg %}
+  <div class="banner banner-warn">
+    ⚠️ 上一步發生錯誤：{{ status.error_msg[:120] }}
+  </div>
+  {% endif %}
 
-/* Connector */
-.connector{width:2px;height:14px;background:var(--border);margin-left:33px;}
-.connector.done{background:#14532d;}
-
-@media(max-width:768px){.layout{grid-template-columns:1fr;}.sidebar{display:none;}.content{padding:16px;}.topbar{padding:14px 16px;}}
-</style>
-</head>
-<body>
-<div class="layout">
-  <aside class="sidebar">
-    <div class="logo">AI 頻道<span>自動化製作系統</span></div>
-    <a href="/" class="nav-item"><span class="nav-icon">📰</span>今日選題</a>
-    <a href="/status" class="nav-item active"><span class="nav-icon">🚀</span>製作進度</a>
-    <a href="/script" class="nav-item"><span class="nav-icon">📝</span>腳本審閱</a>
-    <a href="/report" class="nav-item"><span class="nav-icon">📊</span>週報分析</a>
-    <a href="/setup" class="nav-item"><span class="nav-icon">⚙️</span>系統設定</a>
-  </aside>
-
-  <main class="main">
-    <div class="topbar">
-      <h1>製作進度</h1>
-      <a href="/" class="btn btn-outline">← 返回選題</a>
-    </div>
-
-    <div class="content">
-
-      {% if selected %}
-      <div class="info-card">
-        <h2>本集資訊</h2>
-        <div class="info-row">
-          <span class="info-label">標題</span>
-          <span class="info-val">{{ selected.suggested_title or selected.title }}</span>
+  {% if selected %}
+  <div class="section-label">本集資訊</div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-body" style="padding:16px 20px">
+      <div class="meta-grid">
+        <div class="meta-box">
+          <div class="label">選定標題</div>
+          <div class="val" style="font-weight:600;color:var(--text)">
+            {{ selected.suggested_title or selected.title }}
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">來源</span>
-          <span class="info-val">{{ selected.source_name }}</span>
+        <div class="meta-box">
+          <div class="label">來源 / 切入角度</div>
+          <div class="val">{{ selected.source_name }} — 角度 {{ status.selected_angle }}</div>
         </div>
-        <div class="info-row">
-          <span class="info-label">切入角度</span>
-          <span class="info-val">{{ status.selected_angle }}</span>
-        </div>
-        {% if status.custom_note %}
-        <div class="info-row">
-          <span class="info-label">補充說明</span>
-          <span class="info-val">{{ status.custom_note }}</span>
-        </div>
-        {% endif %}
+      </div>
+      {% if status.custom_note %}
+      <div style="margin-top:8px;font-size:12px;color:var(--text3)">
+        補充：{{ status.custom_note }}
       </div>
       {% endif %}
-
-      {% set all_stages = [
-        ('idle',        '⏸', '等待選題',       '尚未選定今日主題'),
-        ('selected',    '✅', '已選題',         '主題已確認，準備開始製作'),
-        ('researching', '🔍', '深度研究中',     '正在搜集相關資料與背景知識'),
-        ('scripting',   '✍️', '腳本生成中',     'Claude 正在撰寫完整腳本'),
-        ('script_ready','📄', '腳本就緒',       '請審閱腳本後確認繼續'),
-        ('tts',         '🎙️', '配音生成中',     'XTTS-v2 本地生成配音'),
-        ('images',      '🖼️', '圖片生成中',     'ComfyUI 生成場景圖片'),
-        ('compositing', '🎬', '影片合成中',     'FFmpeg 合成影片與字幕'),
-        ('uploading',   '📤', '上傳 YouTube',  '影片上傳並排程發布'),
-        ('done',        '🎉', '今日完成',       '影片已排程，社群貼文準備就緒'),
-      ] %}
-
-      {% set stage_order = ['idle','selected','researching','scripting','script_ready','tts','images','compositing','uploading','done'] %}
-      {% set cur_idx = stage_order.index(status.stage) if status.stage in stage_order else 0 %}
-
-      <div class="pipeline">
-      {% for key, icon, name, desc in all_stages %}
-        {% set idx = loop.index0 %}
-        {% if idx < cur_idx %}
-          <div class="step done">
-            <div class="step-dot">{{ icon }}</div>
-            <div class="step-info"><div class="name">{{ name }}</div><div class="desc">{{ desc }}</div></div>
-          </div>
-        {% elif key == status.stage %}
-          <div class="step active">
-            <div class="step-dot">{{ icon }}</div>
-            <div class="step-info"><div class="name">{{ name }}</div><div class="desc">{{ desc }}</div></div>
-          </div>
-        {% else %}
-          <div class="step pending">
-            <div class="step-dot">{{ icon }}</div>
-            <div class="step-info"><div class="name">{{ name }}</div><div class="desc">{{ desc }}</div></div>
-          </div>
-        {% endif %}
-        {% if not loop.last %}
-          <div class="connector {% if idx < cur_idx %}done{% endif %}"></div>
-        {% endif %}
-      {% endfor %}
-      </div>
-
     </div>
-  </main>
+  </div>
+  {% endif %}
+
+  <div class="section-label">流程進度</div>
+
+  {% set all_stages = [
+    ('idle',        '⏸', '等待選題',     '尚未選定今日主題'),
+    ('selected',    '✅', '已選題',       '主題確認，等待腳本生成'),
+    ('researching', '🔍', '深度研究中',   '搜集背景資料與數據'),
+    ('scripting',   '✍️', '腳本生成中',   'Claude 正在撰寫完整腳本'),
+    ('script_ready','📄', '腳本待審閱',   '請至「腳本審閱」頁確認後繼續'),
+    ('tts',         '🎙️', '配音生成中',   'XTTS-v2 本地生成配音'),
+    ('images',      '🖼️', '圖片生成中',   'ComfyUI 生成場景圖片'),
+    ('compositing', '🎬', '影片合成中',   'FFmpeg 合成影片與字幕'),
+    ('uploading',   '📤', '上傳 YouTube', '影片上傳並排程台灣時間 20:00 發布'),
+    ('done',        '🎉', '今日完成',     '影片已排程，社群貼文備妥'),
+  ] %}
+  {% set stage_order = ['idle','selected','researching','scripting','script_ready','tts','images','compositing','uploading','done'] %}
+  {% set cur = stage_order.index(status.stage) if status.stage in stage_order else 0 %}
+
+  <div class="pipeline">
+  {% for key, icon, name, desc in all_stages %}
+    {% set idx = loop.index0 %}
+    {% if idx < cur %}
+      <div class="pipe-step done">
+        <div class="pipe-dot">{{ icon }}</div>
+        <div class="pipe-body"><div class="pipe-name">{{ name }}</div><div class="pipe-desc">{{ desc }}</div></div>
+      </div>
+    {% elif key == status.stage %}
+      <div class="pipe-step active">
+        <div class="pipe-dot">{{ icon }}</div>
+        <div class="pipe-body">
+          <div class="pipe-name">{{ name }}</div>
+          <div class="pipe-desc">{{ desc }}</div>
+          {% if key == 'script_ready' %}
+          <a href="/script" class="btn btn-primary btn-sm" style="margin-top:10px">前往審閱腳本 →</a>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="pipe-step pending">
+        <div class="pipe-dot">{{ icon }}</div>
+        <div class="pipe-body"><div class="pipe-name">{{ name }}</div><div class="pipe-desc">{{ desc }}</div></div>
+      </div>
+    {% endif %}
+  {% endfor %}
+  </div>
+
 </div>
-<script>
-  // 每 15 秒自動刷新
-  setTimeout(() => location.reload(), 15000);
-</script>
-</body>
-</html>
+{% endblock %}
+
+{% block scripts %}
+<script>setTimeout(() => location.reload(), 15000);</script>
+{% endblock %}

@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from .models import (
-    NewsItem, Episode, PipelineStatus, SessionLocal, init_db
+    NewsItem, Episode, PipelineStatus, DailyBrief, ScriptRecord,
+    SessionLocal, init_db
 )
 
 
@@ -141,6 +142,80 @@ def set_pipeline_status(stage: str, date: str | None = None, **kwargs) -> None:
                 setattr(row, k, v)
 
 
+# ───────────── Daily Brief ─────────────
+
+def save_brief(date: str, content: dict[str, Any], unscored: int = 0) -> None:
+    import json
+    with get_session() as s:
+        row = s.query(DailyBrief).filter_by(date=date).first()
+        if not row:
+            row = DailyBrief(date=date)
+            s.add(row)
+        row.content_json = json.dumps(content, ensure_ascii=False)
+        row.candidate_count = len(content.get("candidates", []))
+        row.unscored_count = unscored
+        row.created_at = datetime.now(timezone.utc).isoformat()
+
+
+def load_brief(date: str | None = None) -> dict[str, Any] | None:
+    import json
+    if not date:
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    with get_session() as s:
+        row = s.query(DailyBrief).filter_by(date=date).first()
+        if not row:
+            return None
+        d = _row_to_dict(row)
+        d["content"] = json.loads(row.content_json) if row.content_json else {}
+        return d
+
+
+def get_unscored_count() -> int:
+    with get_session() as s:
+        return s.query(NewsItem).filter(
+            NewsItem.ai_score.is_(None), NewsItem.status == "new"
+        ).count()
+
+
+# ───────────── Script Record ─────────────
+
+def save_script(date: str, news_id: int | None,
+                script: dict[str, Any], research: dict[str, Any] | None = None) -> int:
+    import json
+    with get_session() as s:
+        row = ScriptRecord(
+            date=date,
+            news_item_id=news_id,
+            script_json=json.dumps(script, ensure_ascii=False),
+            research_json=json.dumps(research, ensure_ascii=False) if research else None,
+            status="draft",
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+        s.add(row)
+        s.flush()
+        return row.id
+
+
+def load_latest_script() -> dict[str, Any] | None:
+    import json
+    with get_session() as s:
+        row = s.query(ScriptRecord).order_by(ScriptRecord.id.desc()).first()
+        if not row:
+            return None
+        d = _row_to_dict(row)
+        d["script"] = json.loads(row.script_json) if row.script_json else {}
+        d["research"] = json.loads(row.research_json) if row.research_json else {}
+        return d
+
+
+def approve_script(script_id: int) -> None:
+    with get_session() as s:
+        row = s.query(ScriptRecord).filter_by(id=script_id).first()
+        if row:
+            row.status = "approved"
+            row.approved_at = datetime.now(timezone.utc).isoformat()
+
+
 # ───────────── 統計 ─────────────
 
 def stats_today() -> dict[str, Any]:
@@ -149,7 +224,15 @@ def stats_today() -> dict[str, Any]:
         total = s.query(NewsItem).count()
         candidates = s.query(NewsItem).filter_by(status="candidate").count()
         selected = s.query(NewsItem).filter_by(status="selected").count()
-    return {"total": total, "candidates": candidates, "selected": selected, "date": today}
+        unscored = s.query(NewsItem).filter(
+            NewsItem.ai_score.is_(None), NewsItem.status == "new"
+        ).count()
+    status = get_pipeline_status(today)
+    return {
+        "total": total, "candidates": candidates,
+        "selected": selected, "unscored": unscored,
+        "stage": status.get("stage", "idle"), "date": today,
+    }
 
 
 # ───────────── 工具 ─────────────

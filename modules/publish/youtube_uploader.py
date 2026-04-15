@@ -165,8 +165,58 @@ def save_episode(video_id: str, script_path: Path, video_path: Path) -> None:
             published_at=datetime.now(timezone.utc).isoformat(),
         )
         s.add(ep)
+        s.flush()
+
+        # topic_history：記錄本次主題，避免未來重複
+        from modules.database.models import TopicHistory
+        import re
+        keywords = re.findall(r'[A-Z][a-zA-Z]+|[\u4e00-\u9fff]{2,6}', title)[:3]
+        for kw in keywords:
+            s.add(TopicHistory(
+                topic_keyword=kw,
+                used_date=today,
+                episode_id=ep.id,
+            ))
+
     db_manager.set_pipeline_status("done")
     logger.info(f"Episode 記錄已存入 DB：{title}")
+
+
+def upload_shorts(script_path: Path, shorts_video: Path | None = None) -> str | None:
+    """上傳 Shorts 版本（60 秒）。shorts_video 為 None 時跳過。"""
+    if shorts_video and not shorts_video.exists():
+        logger.warning(f"Shorts 影片不存在：{shorts_video}，跳過")
+        return None
+    if not shorts_video:
+        logger.info("未提供 Shorts 影片，跳過 Shorts 上傳")
+        return None
+
+    script = json.loads(script_path.read_text(encoding="utf-8"))
+    title_base = (script.get("title_options") or ["AI Shorts"])[0]
+    shorts_title = f"{title_base[:85]} #Shorts"
+    shorts_script = script.get("shorts_script", "")
+
+    body = {
+        "snippet": {
+            "title": shorts_title[:100],
+            "description": shorts_script[:300] + "\n\n#Shorts #AI #人工智慧",
+            "tags": script.get("tags", []) + ["Shorts"],
+            "categoryId": "28",
+        },
+        "status": {"privacyStatus": "public"},
+    }
+
+    from googleapiclient.http import MediaFileUpload
+    youtube = _build_youtube()
+    media = MediaFileUpload(str(shorts_video), mimetype="video/mp4",
+                            chunksize=5 * 1024 * 1024, resumable=True)
+    req = youtube.videos().insert(part=",".join(body.keys()), body=body, media_body=media)
+    resp = None
+    while resp is None:
+        _, resp = req.next_chunk()
+    vid = resp["id"]
+    logger.info(f"Shorts 上傳完成：https://youtu.be/{vid}")
+    return vid
 
 
 def main() -> None:

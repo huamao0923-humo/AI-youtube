@@ -6,9 +6,20 @@ __pycache__/
 venv/
 env/
 
-# 資料 / 產物
+# SQLite WAL / 暫存
 data/channel.db
 data/channel.db-journal
+data/channel.db-shm
+data/channel.db-wal
+
+# 每日暫存資料（不入版本庫）
+data/briefs/
+data/scoring_queue.json
+data/scored_results.json
+data/social/
+data/reports/
+
+# 爬蟲快取 / 產物
 data/news_cache/*
 !data/news_cache/.gitkeep
 data/scripts/*
@@ -19,6 +30,8 @@ data/images/*
 !data/images/.gitkeep
 data/videos/*
 !data/videos/.gitkeep
+
+# 日誌
 logs/*
 !logs/.gitkeep
 
@@ -27,10 +40,12 @@ voice_samples/raw/*
 voice_samples/processed/*
 !voice_samples/.gitkeep
 
-# YouTube 認證
+# YouTube 認證（機密）
 config/youtube_client_secret.json
 config/youtube_token.json
 
-# IDE
+# IDE / 系統
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db

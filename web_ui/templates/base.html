@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}AI 頻道{% endblock %} — 製作系統</title>
+<link rel="stylesheet" href="/static/css/app.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="name">🎬 AI 頻道</div>
+      <div class="sub">自動化製作系統</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">每日流程</div>
+        <a href="/" class="nav-link {% if active == 'index' %}active{% endif %}">
+          <span class="nav-icon">📰</span>今日選題
+          {% if stats and stats.unscored > 0 %}
+          <span class="nav-badge">{{ stats.unscored }}</span>
+          {% endif %}
+        </a>
+        <a href="/status" class="nav-link {% if active == 'status' %}active{% endif %}">
+          <span class="nav-icon">🚀</span>製作進度
+        </a>
+        <a href="/script" class="nav-link {% if active == 'script' %}active{% endif %}">
+          <span class="nav-icon">📝</span>腳本審閱
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">分析與設定</div>
+        <a href="/report" class="nav-link {% if active == 'report' %}active{% endif %}">
+          <span class="nav-icon">📊</span>週報分析
+        </a>
+        <a href="/setup" class="nav-link {% if active == 'setup' %}active{% endif %}">
+          <span class="nav-icon">⚙️</span>系統設定
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">操作</div>
+        <a href="/refresh" class="nav-link">
+          <span class="nav-icon">↻</span>重新抓取
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      {% if stats %}
+      <div class="stats-mini">
+        <div class="row">
+          <span class="label">今日新聞</span>
+          <span class="val val-accent">{{ stats.total }}</span>
+        </div>
+        <div class="row">
+          <span class="label">候選</span>
+          <span class="val val-green">{{ stats.candidates }}</span>
+        </div>
+        {% if stats.unscored > 0 %}
+        <div class="row">
+          <span class="label">待評分</span>
+          <span class="val val-amber">{{ stats.unscored }}</span>
+        </div>
+        {% endif %}
+        <div class="row">
+          <span class="label">流程階段</span>
+          <span class="val val-accent">{{ stats.stage }}</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

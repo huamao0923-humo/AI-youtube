@@ -57,7 +57,11 @@ def generate(top_n: int = 5) -> dict[str, Any]:
         "quick_news": _fetch_quick_news(exclude_ids=[r["id"] for r in candidates]),
     }
 
-    # 存檔
+    # 同時存 DB（讓 Railway Web UI 能讀到）和本地檔案（備用）
+    unscored = db_manager.get_unscored_count()
+    db_manager.save_brief(today, brief, unscored=unscored)
+
+    BRIEF_DIR.mkdir(parents=True, exist_ok=True)
     out = BRIEF_DIR / f"{today}_brief.json"
     out.write_text(json.dumps(brief, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -107,8 +111,13 @@ def _fetch_quick_news(exclude_ids: list[int], limit: int = 5) -> list[dict]:
 
 
 def load_today() -> dict[str, Any] | None:
-    """讀取今日 brief（若已生成）。"""
+    """讀取今日 brief — 優先 DB（Railway），fallback 本地檔。"""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # DB 優先（Railway 環境無本地檔案）
+    row = db_manager.load_brief(today)
+    if row:
+        return row["content"]
+    # fallback 本地
     path = BRIEF_DIR / f"{today}_brief.json"
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))

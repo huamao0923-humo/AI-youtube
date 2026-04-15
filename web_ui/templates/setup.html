@@ -1,130 +1,117 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>系統設定 — AI 頻道</title>
-<style>
-:root{--bg:#09090b;--surface:#18181b;--surface2:#27272a;--border:#3f3f46;--text:#fafafa;--muted:#71717a;--accent:#7c3aed;--accent-light:#8b5cf6;--accent-bg:#1e1333;--green:#22c55e;--green-bg:#052e16;--red:#ef4444;--red-bg:#450a0a;--amber:#f59e0b;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,"Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;}
-.logo{font-size:15px;font-weight:800;color:var(--accent-light);padding:8px 12px 20px;}
-.logo span{display:block;font-size:10px;font-weight:400;color:var(--muted);margin-top:2px;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;color:var(--muted);text-decoration:none;transition:all .15s;}
-.nav-item:hover{background:var(--surface2);color:var(--text);}
-.nav-item.active{background:var(--accent-bg);color:var(--accent-light);font-weight:600;}
-.nav-icon{font-size:15px;width:18px;text-align:center;}
-.main{overflow-y:auto;}
-.topbar{display:flex;align-items:center;padding:20px 32px;border-bottom:1px solid var(--border);}
-.topbar h1{font-size:16px;font-weight:700;}
-.content{padding:28px 32px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
-.card h2{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
-.row:last-child{border-bottom:none;}
-.row .key{color:#a1a1aa;}
-.badge{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;}
-.ok{background:var(--green-bg);color:var(--green);}
-.err{background:var(--red-bg);color:var(--red);}
-.warn{background:#422006;color:var(--amber);}
-code{background:var(--surface2);border-radius:5px;padding:2px 7px;font-size:12px;font-family:monospace;}
-.step{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
-.step:last-child{border-bottom:none;}
-.step-num{width:24px;height:24px;border-radius:50%;background:var(--accent-bg);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
-.step-body .title{font-size:13px;font-weight:600;margin-bottom:4px;}
-.step-body .desc{font-size:12px;color:var(--muted);line-height:1.6;}
-a.link{color:var(--accent-light);font-size:12px;}
-@media(max-width:900px){.layout{grid-template-columns:1fr;}.sidebar{display:none;}.content{grid-template-columns:1fr;padding:16px;}.topbar{padding:14px 16px;}}
-</style>
-</head>
-<body>
-<div class="layout">
-  <aside class="sidebar">
-    <div class="logo">AI 頻道<span>自動化製作系統</span></div>
-    <a href="/" class="nav-item"><span class="nav-icon">📰</span>今日選題</a>
-    <a href="/status" class="nav-item"><span class="nav-icon">🚀</span>製作進度</a>
-    <a href="/script" class="nav-item"><span class="nav-icon">📝</span>腳本審閱</a>
-    <a href="/report" class="nav-item"><span class="nav-icon">📊</span>週報分析</a>
-    <a href="/setup" class="nav-item active"><span class="nav-icon">⚙️</span>系統設定</a>
-  </aside>
-  <main class="main">
-    <div class="topbar"><h1>系統設定</h1></div>
-    <div class="content">
+{% extends "base.html" %}
+{% block title %}系統設定{% endblock %}
 
-      <!-- 環境變數狀態 -->
-      <div class="card">
-        <h2>🔑 環境變數（.env）</h2>
-        {% for k, v in env_vars.items() %}
-        <div class="row">
-          <span class="key">{{ k }}</span>
-          <span class="badge {% if '已設定' in v %}ok{% else %}err{% endif %}">{{ v }}</span>
-        </div>
-        {% else %}
-        <div class="row"><span class="key" style="color:var(--red)">找不到 .env 檔案</span></div>
-        {% endfor %}
-      </div>
-
-      <!-- YouTube API 狀態 -->
-      <div class="card">
-        <h2>📺 YouTube API</h2>
-        <div class="row">
-          <span class="key">client_secret.json</span>
-          <span class="badge {% if has_yt %}ok{% else %}err{% endif %}">
-            {% if has_yt %}已設定{% else %}未設定{% endif %}
-          </span>
-        </div>
-        <div class="row">
-          <span class="key">OAuth2 Token</span>
-          <span class="badge {% if has_token %}ok{% else %}warn{% endif %}">
-            {% if has_token %}已授權{% else %}未授權{% endif %}
-          </span>
-        </div>
-      </div>
-
-      <!-- YouTube 設定步驟 -->
-      <div class="card" style="grid-column:1/-1">
-        <h2>📋 YouTube API 設定步驟</h2>
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <div class="title">建立 Google Cloud 專案</div>
-            <div class="desc">前往 <a class="link" href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → 新增專案 → 啟用 YouTube Data API v3</div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <div class="title">建立 OAuth2 Desktop 憑證</div>
-            <div class="desc">APIs & Services → Credentials → Create Credentials → OAuth client ID → Desktop app → 下載 JSON</div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <div class="title">放置憑證檔案</div>
-            <div class="desc">將下載的 JSON 重新命名並放到：<br><code>config/youtube_client_secret.json</code></div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <div class="title">執行 OAuth2 授權（只需一次）</div>
-            <div class="desc">在本地執行，會自動開啟瀏覽器：<br><code>python -m modules.publish.youtube_uploader --auth-only</code></div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">5</div>
-          <div class="step-body">
-            <div class="title">測試上傳</div>
-            <div class="desc">用最新腳本測試上傳一支私密影片（不公開）：<br><code>python daily_pipeline.py --upload --privacy private</code></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </main>
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left"><h1>系統設定</h1></div>
 </div>
-</body>
-</html>
+
+<div class="content">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+  <!-- 環境變數 -->
+  <div class="card" style="padding:20px">
+    <div class="section-label">環境變數（.env）</div>
+    {% for k, v in env_vars.items() %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span style="color:var(--text2);font-family:monospace">{{ k }}</span>
+      <span class="status-badge {% if '已設定' in v %}status-ok{% else %}status-err{% endif %}">{{ v }}</span>
+    </div>
+    {% else %}
+    <div style="color:var(--red);font-size:13px">找不到 .env 檔案</div>
+    {% endfor %}
+  </div>
+
+  <!-- YouTube 狀態 -->
+  <div class="card" style="padding:20px">
+    <div class="section-label">YouTube API</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span style="color:var(--text2)">client_secret.json</span>
+      <span class="status-badge {% if has_yt %}status-ok{% else %}status-err{% endif %}">
+        {% if has_yt %}已設定{% else %}未設定{% endif %}
+      </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:13px">
+      <span style="color:var(--text2)">OAuth2 Token</span>
+      <span class="status-badge {% if has_token %}status-ok{% else %}status-warn{% endif %}">
+        {% if has_token %}已授權{% else %}未授權{% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- 設定步驟 -->
+<div class="card" style="padding:20px 24px">
+  <div class="section-label">YouTube API 設定步驟</div>
+  <div style="display:flex;flex-direction:column">
+
+    <div class="setup-step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">建立 Google Cloud 專案 + 啟用 YouTube Data API v3</div>
+        <div class="step-desc">前往 <strong>console.cloud.google.com</strong> → 新增專案 → APIs & Services → Enable APIs → 搜尋「YouTube Data API v3」並啟用</div>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">建立 OAuth2 Desktop 憑證</div>
+        <div class="step-desc">APIs & Services → Credentials → Create Credentials → OAuth client ID → Application type: <strong>Desktop app</strong> → 下載 JSON</div>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">放置憑證檔案</div>
+        <div class="step-desc">重新命名後放到：<code>config/youtube_client_secret.json</code></div>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">執行 OAuth2 授權（只需一次）</div>
+        <div class="step-desc">在本地終端執行，會自動開啟瀏覽器授權：<br>
+        <code>python -m modules.publish.youtube_uploader --auth-only</code></div>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="step-num">5</div>
+      <div>
+        <div class="step-title">測試上傳（私密影片）</div>
+        <div class="step-desc"><code>python daily_pipeline.py --upload</code><br>
+        上傳後到 YouTube Studio 確認影片出現，再改為公開。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 本地啟動說明 -->
+<div class="card" style="padding:20px 24px;margin-top:16px">
+  <div class="section-label">本地自動化啟動</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">排程器（06:00 起自動抓取）</div>
+      <code style="display:block;font-size:12px">python scheduler.py</code>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Watcher（監聽 Web UI 觸發）</div>
+      <code style="display:block;font-size:12px">python watcher.py</code>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Web UI（本地預覽）</div>
+      <code style="display:block;font-size:12px">python web_ui/app.py</code>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">每日流程測試</div>
+      <code style="display:block;font-size:12px">python daily_pipeline.py --dry-run</code>
+    </div>
+  </div>
+</div>
+
+</div>
+{% endblock %}

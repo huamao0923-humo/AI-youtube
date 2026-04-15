@@ -1,226 +1,112 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 頻道控制台</title>
-<style>
-:root {
-  --bg: #09090b;
-  --surface: #18181b;
-  --surface2: #27272a;
-  --border: #3f3f46;
-  --text: #fafafa;
-  --muted: #71717a;
-  --accent: #7c3aed;
-  --accent-light: #8b5cf6;
-  --accent-bg: #1e1333;
-  --green: #22c55e;
-  --green-bg: #052e16;
-  --amber: #f59e0b;
-  --red: #ef4444;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, "Microsoft JhengHei", "PingFang TC", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+{% extends "base.html" %}
+{% block title %}今日選題{% endblock %}
 
-/* ── Sidebar Layout ── */
-.layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-
-.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
-.logo { font-size: 15px; font-weight: 800; color: var(--accent-light); padding: 8px 12px 20px; letter-spacing: -.02em; }
-.logo span { display: block; font-size: 10px; font-weight: 400; color: var(--muted); margin-top: 2px; letter-spacing: 0; }
-
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); text-decoration: none; transition: all .15s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
-.nav-item:hover { background: var(--surface2); color: var(--text); }
-.nav-item.active { background: var(--accent-bg); color: var(--accent-light); font-weight: 600; }
-.nav-icon { font-size: 15px; width: 18px; text-align: center; }
-
-.sidebar-footer { margin-top: auto; }
-.stat-pill { background: var(--surface2); border-radius: 8px; padding: 10px 12px; font-size: 12px; }
-.stat-pill .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.stat-pill .row:last-child { margin-bottom: 0; }
-.stat-pill .label { color: var(--muted); }
-.stat-pill .val { font-weight: 600; color: var(--green); }
-
-/* ── Main ── */
-.main { overflow-y: auto; }
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); }
-.topbar h1 { font-size: 16px; font-weight: 700; }
-.topbar .date { font-size: 12px; color: var(--muted); }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; border: none; transition: all .15s; }
-.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-.btn-outline:hover { border-color: var(--accent); color: var(--accent-light); }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #6d28d9; }
-
-.content { padding: 28px 32px; }
-
-/* ── Alert bar ── */
-.alert { background: var(--accent-bg); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
-.alert a { color: var(--accent-light); text-decoration: none; font-weight: 600; }
-
-/* ── Card ── */
-.section-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 14px; }
-
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 14px; transition: border-color .2s, box-shadow .2s; }
-.card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-bg); }
-
-.card-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
-.rank-badge { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0; background: var(--surface2); color: var(--muted); }
-.rank-badge.gold { background: linear-gradient(135deg,#78350f,#92400e); color: var(--amber); }
-.rank-badge.silver { background: linear-gradient(135deg,#1c1c1c,#2d2d2d); color: #a1a1aa; }
-
-.card-info { flex: 1; min-width: 0; }
-.card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
-.card-origin { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.score-chip { flex-shrink: 0; background: var(--green-bg); color: var(--green); border: 1px solid #14532d; border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 800; }
-
-.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.meta-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
-.meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
-.meta-val { font-size: 13px; color: #d4d4d8; line-height: 1.55; }
-
-/* ── Angle tabs ── */
-.angles { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-.angle-tab { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
-.angle-tab:hover { border-color: var(--accent); color: var(--accent-light); }
-.angle-tab.on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-light); }
-
-/* ── Select row ── */
-.select-row { display: flex; gap: 8px; align-items: center; }
-.select-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--text); outline: none; min-width: 0; }
-.select-row input:focus { border-color: var(--accent); }
-.select-row input::placeholder { color: var(--muted); }
-
-/* ── Quick news ── */
-.quick-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 28px; }
-.quick-box .qh { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
-.quick-item { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.quick-item:last-child { border-bottom: none; }
-.quick-item .qt { color: #d4d4d8; }
-.quick-item .qs { font-size: 10px; color: var(--muted); white-space: nowrap; }
-
-/* ── Mobile ── */
-@media (max-width: 768px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
-  .content { padding: 16px; }
-  .meta-grid { grid-template-columns: 1fr; }
-  .topbar { padding: 14px 16px; }
-}
-</style>
-</head>
-<body>
-<div class="layout">
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="logo">AI 頻道<span>自動化製作系統</span></div>
-    <a href="/" class="nav-item active"><span class="nav-icon">📰</span>今日選題</a>
-    <a href="/status" class="nav-item"><span class="nav-icon">🚀</span>製作進度</a>
-    <a href="/script" class="nav-item"><span class="nav-icon">📝</span>腳本審閱</a>
-    <a href="/report" class="nav-item"><span class="nav-icon">📊</span>週報分析</a>
-    <a href="/setup" class="nav-item"><span class="nav-icon">⚙️</span>系統設定</a>
-    <a href="/refresh" class="nav-item" style="margin-top:8px"><span class="nav-icon">↻</span>重新抓取</a>
-
-    <div class="sidebar-footer">
-      <div class="stat-pill">
-        <div class="row"><span class="label">今日新聞</span><span class="val">{{ stats.total }}</span></div>
-        <div class="row"><span class="label">候選</span><span class="val">{{ stats.candidates }}</span></div>
-        <div class="row"><span class="label">已選</span><span class="val">{{ stats.selected }}</span></div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main -->
-  <main class="main">
-    <div class="topbar">
-      <h1>今日選題 <span style="color:var(--muted);font-weight:400">{{ brief.date }}</span></h1>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span class="date">最後更新 {{ brief.generated_at[11:16] }} UTC</span>
-        <a href="/refresh" class="btn btn-outline">↻ 重新整理</a>
-      </div>
-    </div>
-
-    <div class="content">
-
-      {% if status.stage == 'selected' %}
-      <div class="alert">
-        ✅ 已選題完成 →
-        <a href="/status">查看製作進度</a>
-      </div>
-      {% endif %}
-
-      <div class="section-label">候選新聞 — 選一則開始製作</div>
-
-      {% for item in brief.candidates %}
-      <div class="card">
-        <div class="card-top">
-          <div class="rank-badge {% if item.rank == 1 %}gold{% elif item.rank == 2 %}silver{% endif %}">{{ item.rank }}</div>
-          <div class="card-info">
-            <div class="card-title">{{ item.suggested_title or item.title }}</div>
-            <div class="card-origin">{{ item.source_name }} · {{ (item.published_at or '')[:10] }}</div>
-          </div>
-          <div class="score-chip">{{ '%.1f'|format(item.ai_score) }}</div>
-        </div>
-
-        <div class="meta-grid">
-          <div class="meta-box">
-            <div class="meta-label">商業意義</div>
-            <div class="meta-val">{{ item.business_angle or '—' }}</div>
-          </div>
-          <div class="meta-box">
-            <div class="meta-label">台灣觀眾為什麼要看</div>
-            <div class="meta-val">{{ item.why_audience_cares or '—' }}</div>
-          </div>
-        </div>
-
-        <form method="POST" action="/select">
-          <input type="hidden" name="news_id" value="{{ item.id }}">
-          <input type="hidden" name="angle" value="A" id="hidden-{{ item.id }}">
-
-          <div class="angles">
-            {% for ang in item.angles %}
-            <button type="button"
-              class="angle-tab {% if loop.first %}on{% endif %}"
-              onclick="pickAngle({{ item.id }}, '{{ ang.label }}', this)"
-              title="{{ ang.description }}">
-              {{ ang.label }} — {{ ang.name }}
-            </button>
-            {% endfor %}
-          </div>
-
-          <div class="select-row">
-            <input type="text" name="custom_note" placeholder="補充說明或自訂角度（可留空）">
-            <button type="submit" class="btn btn-primary">選這則 →</button>
-          </div>
-        </form>
-      </div>
-      {% endfor %}
-
-      {% if brief.quick_news %}
-      <div class="quick-box">
-        <div class="qh">快訊補充（可在影片中帶到）</div>
-        {% for n in brief.quick_news %}
-        <div class="quick-item">
-          <span class="qt">{{ n.title }}</span>
-          <span class="qs">{{ n.source }}</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-    </div><!-- /content -->
-  </main>
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>今日選題</h1>
+    <span class="sub">{{ brief.date }}</span>
+  </div>
+  <div class="topbar-actions">
+    <span class="sub" style="line-height:2">更新於 {{ brief.generated_at[11:16] }} UTC</span>
+    <a href="/refresh" class="btn btn-ghost">↻ 重新整理</a>
+  </div>
 </div>
 
+<div class="content">
+
+  {% if status.stage == 'selected' or status.stage == 'done' %}
+  <div class="banner banner-success">
+    ✅ 已選題完成 →
+    <a href="/status">查看製作進度</a>
+  </div>
+  {% endif %}
+
+  {% if stats and stats.unscored > 0 %}
+  <div class="banner banner-warn">
+    ⚠️ 今日有 <strong>{{ stats.unscored }}</strong> 則新聞尚未 AI 評分，候選池可能不完整。
+    執行：<code>python -m modules.filter.export_for_scoring</code> 後貼給 Claude Code 評分。
+  </div>
+  {% endif %}
+
+  <div class="section-label">候選新聞</div>
+  <div class="cards">
+
+  {% for item in brief.candidates %}
+  <div class="card">
+    <div class="card-header">
+      <div class="rank rank-{% if item.rank == 1 %}1{% elif item.rank == 2 %}2{% else %}n{% endif %}">
+        {{ item.rank }}
+      </div>
+      <div class="card-title-block">
+        <div class="card-title">{{ item.suggested_title or item.title }}</div>
+        <div class="card-meta">
+          <span>📡 {{ item.source_name }}</span>
+          <span>📅 {{ (item.published_at or '')[:10] }}</span>
+        </div>
+      </div>
+      <div class="score">{{ '%.1f'|format(item.ai_score) }}</div>
+    </div>
+
+    <div class="card-body">
+      <div class="meta-grid">
+        <div class="meta-box">
+          <div class="label">商業意義</div>
+          <div class="val">{{ item.business_angle or '—' }}</div>
+        </div>
+        <div class="meta-box">
+          <div class="label">台灣觀眾視角</div>
+          <div class="val">{{ item.why_audience_cares or '—' }}</div>
+        </div>
+      </div>
+
+      <form method="POST" action="/select">
+        <input type="hidden" name="news_id" value="{{ item.id }}">
+        <input type="hidden" name="angle" value="A" id="angle-{{ item.id }}">
+
+        <div class="angles">
+          {% for ang in item.angles %}
+          <button type="button"
+            class="angle-tab {% if loop.first %}on{% endif %}"
+            onclick="pickAngle({{ item.id }}, '{{ ang.label }}', this)"
+            title="{{ ang.description }}">
+            {{ ang.label }} — {{ ang.name }}
+          </button>
+          {% endfor %}
+        </div>
+
+        <div class="select-row">
+          <input type="text" name="custom_note" placeholder="補充說明或自訂角度（可留空）">
+          <button type="submit" class="btn btn-primary">選這則 →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+
+  </div><!-- /cards -->
+
+  {% if brief.quick_news %}
+  <div class="quick-box">
+    <div class="quick-header">快訊補充（可在影片中帶到）</div>
+    {% for n in brief.quick_news %}
+    <div class="quick-item">
+      <span class="t">{{ n.title }}</span>
+      <span class="s">{{ n.source }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
 function pickAngle(id, label, btn) {
-  document.getElementById('hidden-' + id).value = label;
+  document.getElementById('angle-' + id).value = label;
   btn.closest('.angles').querySelectorAll('.angle-tab').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
 }
 </script>
-</body>
-</html>
+{% endblock %}

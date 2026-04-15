@@ -1,166 +1,106 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>腳本審閱 — AI 頻道</title>
-<style>
-:root{--bg:#09090b;--surface:#18181b;--surface2:#27272a;--border:#3f3f46;--text:#fafafa;--muted:#71717a;--accent:#7c3aed;--accent-light:#8b5cf6;--accent-bg:#1e1333;--green:#22c55e;--amber:#f59e0b;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,"Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;}
-.logo{font-size:15px;font-weight:800;color:var(--accent-light);padding:8px 12px 20px;}
-.logo span{display:block;font-size:10px;font-weight:400;color:var(--muted);margin-top:2px;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;color:var(--muted);text-decoration:none;transition:all .15s;}
-.nav-item:hover{background:var(--surface2);color:var(--text);}
-.nav-item.active{background:var(--accent-bg);color:var(--accent-light);font-weight:600;}
-.nav-icon{font-size:15px;width:18px;text-align:center;}
-.main{overflow-y:auto;}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);}
-.topbar h1{font-size:16px;font-weight:700;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;border:none;transition:all .15s;}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);}
-.btn-outline:hover{border-color:var(--accent);color:var(--accent-light);}
-.btn-green{background:#15803d;color:#fff;}
-.btn-green:hover{background:#166534;}
-.btn-primary{background:var(--accent);color:#fff;}
-.btn-primary:hover{background:#6d28d9;}
-.content{padding:28px 32px;}
-.two-col{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;}
+{% extends "base.html" %}
+{% block title %}腳本審閱{% endblock %}
 
-/* Script sections */
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
-.section-header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);}
-.type-badge{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
-.type-hook{background:#450a0a;color:#fca5a5;}
-.type-background{background:#1c1917;color:#a8a29e;}
-.type-main_point{background:#1e1b4b;color:#a78bfa;}
-.type-data_deep_dive{background:#052e16;color:#86efac;}
-.type-impact{background:#431407;color:#fdba74;}
-.type-counterpoint{background:#3b0764;color:#e879f9;}
-.type-conclusion{background:#0c1a2e;color:#7dd3fc;}
-.type-cta{background:#2d1b00;color:#fcd34d;}
-.ts{font-size:11px;color:var(--muted);margin-left:auto;}
-.dur{font-size:11px;color:var(--muted);}
-
-.section-body{padding:14px 16px;}
-.narration{font-size:14px;line-height:1.7;color:#e4e4e7;white-space:pre-wrap;}
-.screen-note{margin-top:8px;font-size:12px;color:var(--accent-light);font-style:italic;}
-.visual-prompt{margin-top:6px;font-size:11px;color:#52525b;background:var(--bg);border-radius:6px;padding:6px 10px;}
-
-/* Right panel */
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;position:sticky;top:20px;}
-.panel h2{font-size:14px;font-weight:700;margin-bottom:14px;}
-.panel-row{margin-bottom:14px;}
-.panel-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
-.panel-val{font-size:13px;color:#d4d4d8;line-height:1.5;}
-.title-opt{padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;cursor:pointer;transition:all .15s;}
-.title-opt:hover{border-color:var(--accent);color:var(--accent-light);}
-.tag{display:inline-block;background:var(--surface2);border-radius:4px;padding:2px 7px;font-size:11px;color:var(--muted);margin:2px;}
-.action-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
-
-@media(max-width:900px){.two-col{grid-template-columns:1fr;}.layout{grid-template-columns:1fr;}.sidebar{display:none;}.content{padding:16px;}.topbar{padding:14px 16px;}}
-</style>
-</head>
-<body>
-<div class="layout">
-  <aside class="sidebar">
-    <div class="logo">AI 頻道<span>自動化製作系統</span></div>
-    <a href="/" class="nav-item"><span class="nav-icon">📰</span>今日選題</a>
-    <a href="/status" class="nav-item"><span class="nav-icon">🚀</span>製作進度</a>
-    <a href="/script" class="nav-item active"><span class="nav-icon">📝</span>腳本審閱</a>
-    <a href="/report" class="nav-item"><span class="nav-icon">📊</span>週報分析</a>
-    <a href="/setup" class="nav-item"><span class="nav-icon">⚙️</span>系統設定</a>
-  </aside>
-
-  <main class="main">
-    <div class="topbar">
-      <h1>腳本審閱
-        {% if script %}<span style="color:var(--muted);font-weight:400;font-size:14px;margin-left:8px">{{ script._meta.title[:30] }}{% if script._meta.title|length > 30 %}…{% endif %}</span>{% endif %}
-      </h1>
-      <div style="display:flex;gap:8px">
-        <a href="/" class="btn btn-outline">← 返回</a>
-      </div>
-    </div>
-
-    <div class="content">
-    {% if not script %}
-      <div style="text-align:center;padding:60px 20px;color:var(--muted);">
-        <div style="font-size:40px;margin-bottom:16px">📝</div>
-        <div style="font-size:16px;margin-bottom:8px">尚無腳本</div>
-        <div style="font-size:13px">請先在選題頁選定主題，執行腳本生成後再來此審閱。</div>
-      </div>
-    {% else %}
-      <div class="two-col">
-
-        <!-- 左：腳本段落 -->
-        <div>
-          {% for sec in script.script_sections %}
-          <div class="section-card">
-            <div class="section-header">
-              <span class="type-badge type-{{ sec.type }}">{{ sec.type }}</span>
-              <span style="font-size:13px;color:#a1a1aa">段落 {{ sec.section_id }}</span>
-              <span class="ts">{{ sec.timestamp }}</span>
-              <span class="dur">{{ sec.duration_seconds }}s</span>
-            </div>
-            <div class="section-body">
-              <div class="narration">{{ sec.narration }}</div>
-              {% if sec.screen_note %}
-              <div class="screen-note">{{ sec.screen_note }}</div>
-              {% endif %}
-              {% if sec.visual_prompt %}
-              <div class="visual-prompt">🖼 {{ sec.visual_prompt }}</div>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-        <!-- 右：資訊面板 -->
-        <div class="panel">
-          <h2>本集資訊</h2>
-
-          <div class="panel-row">
-            <div class="panel-label">預估長度</div>
-            <div class="panel-val">{{ script.estimated_duration }}</div>
-          </div>
-
-          <div class="panel-row">
-            <div class="panel-label">縮圖概念</div>
-            <div class="panel-val">{{ script.thumbnail_concept }}</div>
-          </div>
-
-          <div class="panel-row">
-            <div class="panel-label">標題選項（點擊複製）</div>
-            {% for t in script.title_options %}
-            <div class="title-opt" onclick="navigator.clipboard.writeText('{{ t }}').then(()=>this.style.borderColor='#22c55e')">{{ t }}</div>
-            {% endfor %}
-          </div>
-
-          <div class="panel-row">
-            <div class="panel-label">標籤</div>
-            <div>{% for tag in script.tags[:12] %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
-          </div>
-
-          {% if script.shorts_script %}
-          <div class="panel-row">
-            <div class="panel-label">Shorts 版本（60s）</div>
-            <div class="panel-val" style="font-size:12px;max-height:120px;overflow-y:auto">{{ script.shorts_script }}</div>
-          </div>
-          {% endif %}
-
-          <div class="action-row">
-            <form method="POST" action="/script/approve">
-              <button type="submit" class="btn btn-green">✅ 確認腳本，開始製作</button>
-            </form>
-          </div>
-        </div>
-
-      </div>
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>腳本審閱</h1>
+    {% if script and script._meta %}
+    <span class="sub">{{ script._meta.title[:35] }}{% if script._meta.title|length > 35 %}…{% endif %}</span>
     {% endif %}
-    </div>
-  </main>
+  </div>
+  <div class="topbar-actions">
+    <a href="/" class="btn btn-ghost">← 返回</a>
+  </div>
 </div>
-</body>
-</html>
+
+<div class="content">
+{% if not script %}
+  <div class="empty">
+    <div class="empty-icon">📝</div>
+    <div class="empty-title">尚無腳本</div>
+    <div class="empty-desc">請先在選題頁選定主題，執行腳本生成後再來此審閱。<br>
+    <code>python -m modules.script.script_writer --news-id &lt;id&gt;</code></div>
+  </div>
+{% else %}
+  <div class="two-col">
+
+    <!-- 左：腳本段落 -->
+    <div>
+      {% set total_dur = script.script_sections | sum(attribute='duration_seconds') %}
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span class="section-label" style="margin-bottom:0">{{ script.script_sections|length }} 個段落</span>
+        <span style="font-size:12px;color:var(--text3)">⏱ {{ total_dur // 60 }}分{{ total_dur % 60 }}秒</span>
+      </div>
+
+      {% for sec in script.script_sections %}
+      <div class="script-section">
+        <div class="section-head">
+          <span class="type-chip type-{{ sec.type }}">{{ sec.type }}</span>
+          <span style="font-size:12px;color:var(--text2)">段落 {{ sec.section_id }}</span>
+          <span class="section-ts">{{ sec.timestamp }}</span>
+          <span class="section-dur">{{ sec.duration_seconds }}s</span>
+        </div>
+        <div class="section-body">
+          <div class="narration">{{ sec.narration }}</div>
+          {% if sec.screen_note %}
+          <div class="screen-note">{{ sec.screen_note }}</div>
+          {% endif %}
+          {% if sec.visual_prompt %}
+          <div class="visual-prompt">🖼 {{ sec.visual_prompt }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 右：資訊面板 -->
+    <div class="info-panel">
+      <h2>本集資訊</h2>
+
+      <div class="info-row">
+        <div class="info-label">預估長度</div>
+        <div class="info-val">{{ script.estimated_duration }}</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">縮圖概念</div>
+        <div class="info-val">{{ script.thumbnail_concept }}</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">標題選項（點擊複製）</div>
+        {% for t in script.title_options %}
+        <div class="title-option"
+          onclick="navigator.clipboard.writeText('{{ t }}').then(()=>{ this.style.borderColor='var(--green)'; setTimeout(()=>this.style.borderColor='',1500) })">
+          <span>{{ t }}</span>
+          <span class="copy-icon">⎘</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">標籤</div>
+        <div>{% for tag in script.tags[:12] %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+      </div>
+
+      {% if script.shorts_script %}
+      <div class="info-row">
+        <div class="info-label">Shorts（60s）</div>
+        <div class="info-val" style="font-size:12px;max-height:110px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px 10px">
+          {{ script.shorts_script }}
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/script/approve" style="margin-top:16px">
+        <button type="submit" class="btn btn-success btn-lg" style="width:100%">
+          ✅ 確認腳本，開始製作
+        </button>
+      </form>
+    </div>
+
+  </div>
+{% endif %}
+</div>
+{% endblock %}

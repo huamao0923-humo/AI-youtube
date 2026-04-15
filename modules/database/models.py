@@ -96,14 +96,69 @@ class PipelineStatus(Base):
     """流水線狀態（供 Web UI 讀寫）。"""
     __tablename__ = "pipeline_status"
 
-    id           = Column(Integer, primary_key=True, autoincrement=True)
-    date         = Column(String(16), nullable=False, unique=True)
-    stage        = Column(String(32), default="idle")
-    selected_id  = Column(Integer)
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    date           = Column(String(16), nullable=False, unique=True)
+    stage          = Column(String(32), default="idle")
+    selected_id    = Column(Integer)
     selected_angle = Column(String(4))
-    custom_note  = Column(Text)
-    updated_at   = Column(String(64))
+    custom_note    = Column(Text)
+    updated_at     = Column(String(64))
+    error_msg      = Column(Text)   # 最後一次錯誤訊息
+
+
+class DailyBrief(Base):
+    """每日 Brief — 內容存 DB，Railway Web UI 可直接讀取。"""
+    __tablename__ = "daily_briefs"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    date            = Column(String(16), nullable=False, unique=True)
+    content_json    = Column(Text, nullable=False)   # 完整 brief dict 序列化
+    candidate_count = Column(Integer, default=0)
+    unscored_count  = Column(Integer, default=0)     # 當日未評分新聞數
+    created_at      = Column(String(64))
+
+
+class ScriptRecord(Base):
+    """腳本記錄 — 存 DB，Railway 可讀取做審閱。"""
+    __tablename__ = "script_records"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    date          = Column(String(16), nullable=False)
+    news_item_id  = Column(Integer)
+    research_json = Column(Text)
+    script_json   = Column(Text, nullable=False)
+    status        = Column(String(32), default="draft")  # draft|approved|rejected
+    created_at    = Column(String(64))
+    approved_at   = Column(String(64))
 
 
 def init_db() -> None:
+    """建立所有表格，並對既有 DB 補欄位（ALTER TABLE migration）。"""
     Base.metadata.create_all(engine)
+    _migrate_columns()
+
+
+def _migrate_columns() -> None:
+    """對既有 SQLite DB 補新欄位（idempotent — 欄位已存在則跳過）。"""
+    migrations = {
+        "pipeline_status": [
+            ("error_msg", "TEXT"),
+        ],
+    }
+    with engine.connect() as conn:
+        for table, cols in migrations.items():
+            try:
+                existing = [row[1] for row in conn.execute(
+                    __import__("sqlalchemy").text(f"PRAGMA table_info({table})")
+                )]
+            except Exception:
+                continue
+            for col_name, col_type in cols:
+                if col_name not in existing:
+                    try:
+                        conn.execute(__import__("sqlalchemy").text(
+                            f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"
+                        ))
+                        conn.commit()
+                    except Exception:
+                        pass
