@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from modules.common.utils import tw_today
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +29,7 @@ def generate(top_n: int = 5) -> dict[str, Any]:
         limit=top_n,
     )
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = tw_today()
     items = []
 
     for rank, row in enumerate(candidates, 1):
@@ -112,7 +113,7 @@ def _fetch_quick_news(exclude_ids: list[int], limit: int = 5) -> list[dict]:
 
 def load_today() -> dict[str, Any] | None:
     """讀取今日 brief — 優先 DB（Railway），fallback 本地檔。"""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = tw_today()
     # DB 優先（Railway 環境無本地檔案）
     row = db_manager.load_brief(today)
     if row:

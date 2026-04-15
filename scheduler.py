@@ -36,13 +36,30 @@ def job_generate_brief():
 
 
 def job_compose_and_upload():
-    """14:00 — 確認腳本已審閱後，合成影片並上傳（台灣時間 20:00 發布）。"""
+    """14:00 — 前置條件全部通過才執行合成上傳。"""
     from modules.database import db_manager
+    from pathlib import Path
+
     status = db_manager.get_pipeline_status()
-    if status.get("stage") not in ("script_ready", "tts", "images"):
-        logger.info("腳本尚未就緒，跳過合成")
+    stage  = status.get("stage", "idle")
+
+    # 前置條件 1：stage 必須在 tts 之後
+    if stage not in ("tts", "images", "compositing", "uploading"):
+        logger.info(f"排程合成：stage={stage}，前置條件未完成，跳過")
         return
-    logger.info("排程任務：影片合成 + 上傳")
+
+    # 前置條件 2：script.json 必須存在
+    scripts = sorted(Path("data/scripts").glob("*/script.json"), reverse=True)
+    if not scripts:
+        logger.warning("排程合成：找不到 script.json，跳過")
+        return
+
+    # 前置條件 3：今日已選題
+    if not status.get("selected_id"):
+        logger.warning("排程合成：今日尚未選題，跳過")
+        return
+
+    logger.info(f"排程任務：影片合成 + 上傳（stage={stage}）")
     from daily_pipeline import step_compose, step_upload
     video = step_compose()
     if video:

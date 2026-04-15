@@ -3,10 +3,10 @@
 當使用者在 Railway Web UI 點「確認腳本，開始製作」後，
 本機的 watcher 會自動接手執行：配音 → 圖片 → 合成 → 上傳。
 
-啟動（與 scheduler.py 分開，單獨跑）：
+啟動：
   python watcher.py
 
-建議：開機自啟或用 tmux/screen 背景執行。
+建議：用 tmux/screen 背景執行，或設為開機自啟。
 """
 from __future__ import annotations
 
@@ -24,61 +24,74 @@ from modules.database.models import init_db
 
 setup_logger()
 
-POLL_INTERVAL = 30   # 秒
-STAGES_TO_HANDLE = ("selected", "tts", "images", "compositing", "uploading")
+POLL_INTERVAL  = 30    # 秒
+MAX_RETRIES    = 3     # 同一 stage 最多重試次數
+STAGE_TIMEOUT  = 3600  # 秒 — 超過此時間仍在同一 stage 視為卡住
+
+_retry_count: dict[str, int] = {}   # "date:stage" → retry 次數
+_stage_start: dict[str, float] = {} # "date:stage" → 開始時間
 
 
 def _latest_script_path() -> Path | None:
-    scripts = sorted((PROJECT_ROOT / "data" / "scripts").glob("*/script.json"), reverse=True)
+    """找最新的 script.json（按日期資料夾排序）。"""
+    scripts = sorted(
+        (PROJECT_ROOT / "data" / "scripts").glob("*/script.json"), reverse=True
+    )
     return scripts[0] if scripts else None
 
 
+def _fail(stage: str, msg: str, date: str) -> None:
+    """標記失敗，寫 error_msg，不推進 stage。"""
+    logger.error(f"[{stage}] 失敗：{msg}")
+    db_manager.set_pipeline_status(stage, date=date, error_msg=msg[:500])
+
+
 def handle_selected(status: dict) -> None:
-    """已選題 → 觸發研究 + 腳本生成（CoWork 模式只做提醒）。"""
-    logger.info("偵測到選題完成，請執行腳本生成後在 Web UI 確認")
-    # 自動切到 scripting 以顯示正確進度
-    db_manager.set_pipeline_status("scripting")
+    """已選題 → 更新進度顯示，等待使用者觸發腳本生成（CoWork 模式）。"""
+    logger.info("偵測到選題完成 → 進入 scripting 等待階段")
+    logger.info("請執行：python -m modules.script.researcher --news-id <id> --cowork")
+    logger.info("腳本生成後前往 Web UI /script 審閱並確認")
+    db_manager.set_pipeline_status("scripting", date=status.get("date"))
 
 
-def handle_tts(status: dict) -> None:
+def handle_tts(status: dict, date: str) -> None:
     """腳本已確認 → 執行配音（靜音 fallback）。"""
     logger.info("開始配音生成")
     script = _latest_script_path()
     if not script:
-        logger.error("找不到 script.json，跳過 TTS")
-        db_manager.set_pipeline_status("images")
+        _fail("tts", "找不到 script.json，請先執行腳本生成", date)
         return
     try:
         from modules.tts.xtts_engine import generate_audio
         generate_audio(script)
         logger.info("配音完成")
+        db_manager.set_pipeline_status("images", date=date, error_msg=None)
     except Exception as e:
-        logger.error(f"TTS 失敗：{e}（繼續合成）")
-    db_manager.set_pipeline_status("images")
+        _fail("tts", str(e), date)
 
 
-def handle_images(status: dict) -> None:
+def handle_images(status: dict, date: str) -> None:
     """生成圖片（ComfyUI 或佔位圖）。"""
     logger.info("開始圖片生成")
     script = _latest_script_path()
     if not script:
-        db_manager.set_pipeline_status("compositing")
+        db_manager.set_pipeline_status("compositing", date=date, error_msg=None)
         return
     try:
         from modules.image.comfyui_client import generate_images
         generate_images(script)
         logger.info("圖片生成完成")
+        db_manager.set_pipeline_status("compositing", date=date, error_msg=None)
     except Exception as e:
-        logger.error(f"圖片生成失敗：{e}（繼續合成）")
-    db_manager.set_pipeline_status("compositing")
+        _fail("images", str(e), date)
 
 
-def handle_compositing(status: dict) -> None:
+def handle_compositing(status: dict, date: str) -> None:
     """合成影片。"""
     logger.info("開始影片合成")
     script = _latest_script_path()
     if not script:
-        db_manager.set_pipeline_status("uploading")
+        _fail("compositing", "找不到 script.json", date)
         return
     try:
         from modules.video.subtitle_generator import from_script
@@ -87,35 +100,30 @@ def handle_compositing(status: dict) -> None:
 
         slug = script.parent.name
         audio = PROJECT_ROOT / "data" / "audio" / slug / "audio_full.wav"
-
         srt = from_script(script)
         generate_thumbnail(script)
         compose(script, audio_path=audio if audio.exists() else None, subtitle_path=srt)
         logger.info("影片合成完成")
+        db_manager.set_pipeline_status("uploading", date=date, error_msg=None)
     except Exception as e:
-        logger.error(f"合成失敗：{e}")
-        db_manager.set_pipeline_status("compositing", error_msg=str(e))
-        return
-    db_manager.set_pipeline_status("uploading")
+        _fail("compositing", str(e), date)
 
 
-def handle_uploading(status: dict) -> None:
+def handle_uploading(status: dict, date: str) -> None:
     """上傳 YouTube。"""
     logger.info("開始上傳 YouTube")
     script = _latest_script_path()
     if not script:
-        db_manager.set_pipeline_status("done")
+        _fail("uploading", "找不到 script.json", date)
         return
     slug = script.parent.name
     video = PROJECT_ROOT / "data" / "videos" / slug / "final.mp4"
     if not video.exists():
-        logger.error(f"找不到影片：{video}")
-        db_manager.set_pipeline_status("done")
+        _fail("uploading", f"找不到影片：{video}", date)
         return
     try:
         from modules.publish.youtube_uploader import upload, upload_thumbnail, save_episode
         from modules.publish.social_publisher import prepare_posts
-
         video_id = upload(video, script)
         thumb = PROJECT_ROOT / "data" / "images" / slug / "thumbnail.png"
         if thumb.exists():
@@ -123,48 +131,65 @@ def handle_uploading(status: dict) -> None:
         save_episode(video_id, script, video)
         prepare_posts(script, video_id)
         logger.info(f"上傳完成：https://youtu.be/{video_id}")
-        db_manager.set_pipeline_status("done")
+        db_manager.set_pipeline_status("done", date=date, error_msg=None)
     except Exception as e:
-        logger.error(f"上傳失敗：{e}")
-        db_manager.set_pipeline_status("uploading", error_msg=str(e))
+        _fail("uploading", str(e), date)
 
 
 HANDLERS = {
-    "selected": handle_selected,
-    "tts": handle_tts,
-    "images": handle_images,
+    "selected":    handle_selected,
+    "tts":         handle_tts,
+    "images":      handle_images,
     "compositing": handle_compositing,
-    "uploading": handle_uploading,
+    "uploading":   handle_uploading,
 }
-
-_last_handled: dict[str, str] = {}   # date → stage（避免重複觸發）
 
 
 def tick() -> None:
     status = db_manager.get_pipeline_status()
-    stage = status.get("stage", "idle")
-    date  = status.get("date", "")
+    stage  = status.get("stage", "idle")
+    date   = status.get("date", "")
 
     if stage not in HANDLERS:
         return
 
     key = f"{date}:{stage}"
-    if _last_handled.get(date) == key:
-        return  # 這個 stage 今天已處理過
+    retries = _retry_count.get(key, 0)
 
-    logger.info(f"[Watcher] 偵測到新階段：{stage}")
-    _last_handled[date] = key
+    # 超時檢查
+    start = _stage_start.get(key)
+    if start and (time.monotonic() - start) > STAGE_TIMEOUT:
+        logger.error(f"[Watcher] {stage} 超過 {STAGE_TIMEOUT}s，標記失敗")
+        _fail(stage, f"超時（>{STAGE_TIMEOUT}s），請手動排查", date)
+        _retry_count[key] = MAX_RETRIES  # 不再重試
+        return
+
+    # 超過重試次數
+    if retries >= MAX_RETRIES:
+        return  # 靜默等待人工介入
+
+    # 有 error_msg 且還在同 stage → 重試
+    if status.get("error_msg") and retries > 0:
+        logger.warning(f"[Watcher] {stage} 重試（第 {retries} 次）")
+
+    if key not in _stage_start:
+        _stage_start[key] = time.monotonic()
+
+    _retry_count[key] = retries + 1
     try:
-        HANDLERS[stage](status)
+        if stage == "selected":
+            HANDLERS[stage](status)
+        else:
+            HANDLERS[stage](status, date)
     except Exception as e:
-        logger.error(f"[Watcher] 處理 {stage} 時例外：{e}")
-        db_manager.set_pipeline_status(stage, error_msg=str(e))
+        logger.error(f"[Watcher] {stage} 例外：{e}")
+        _fail(stage, str(e), date)
 
 
 def main() -> None:
     init_db()
-    logger.info(f"Pipeline Watcher 啟動，輪詢間隔 {POLL_INTERVAL}s")
-    logger.info("Ctrl+C 停止")
+    logger.info(f"Pipeline Watcher 啟動，輪詢間隔 {POLL_INTERVAL}s，最大重試 {MAX_RETRIES} 次")
+    logger.info("按 Ctrl+C 停止")
     while True:
         try:
             tick()

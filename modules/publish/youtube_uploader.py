@@ -12,7 +12,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+from modules.common.utils import tw_today
 from pathlib import Path
 
 from loguru import logger
@@ -151,7 +152,7 @@ def save_episode(video_id: str, script_path: Path, video_path: Path) -> None:
     from modules.database.models import Episode, SessionLocal
     script = json.loads(script_path.read_text(encoding="utf-8"))
     title = (script.get("title_options") or [""])[0]
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = tw_today()
     news_id = script.get("_meta", {}).get("news_id")
 
     with db_manager.get_session() as s:

@@ -90,6 +90,17 @@
   </div>
 </div>
 
+<!-- 連線測試 -->
+<div class="card" style="padding:20px 24px;margin-top:16px">
+  <div class="section-label">連線測試</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-ghost" onclick="test('db','資料庫')">🗄 測試資料庫</button>
+    <button class="btn btn-ghost" onclick="test('anthropic','Anthropic API')">🤖 測試 Claude API</button>
+    <button class="btn btn-ghost" onclick="test('youtube','YouTube API')">📺 測試 YouTube API</button>
+  </div>
+  <div id="test-result" style="margin-top:12px;font-size:13px"></div>
+</div>
+
 <!-- 本地啟動說明 -->
 <div class="card" style="padding:20px 24px;margin-top:16px">
   <div class="section-label">本地自動化啟動</div>
@@ -114,4 +125,24 @@
 </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function test(service, label) {
+  const el = document.getElementById('test-result');
+  el.innerHTML = `<span style="color:var(--text3)">測試 ${label} 中...</span>`;
+  try {
+    const r = await fetch('/api/test/' + service);
+    const d = await r.json();
+    if (d.ok) {
+      el.innerHTML = '<span style="color:var(--green)">✅ ' + label + ' 連線正常' + (d.model ? '（' + d.model + '）' : '') + '</span>';
+    } else {
+      el.innerHTML = '<span style="color:var(--red)">❌ ' + label + ' 失敗：' + (d.error || '') + '</span>';
+    }
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--red)">❌ 請求失敗：' + e.message + '</span>';
+  }
+}
+</script>
 {% endblock %}

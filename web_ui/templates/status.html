@@ -94,5 +94,38 @@
 {% endblock %}
 
 {% block scripts %}
-<script>setTimeout(() => location.reload(), 15000);</script>
+<script>
+// SSE 即時更新 — 比整頁刷新更精準
+const evtSrc = new EventSource('/api/sse/status');
+evtSrc.onmessage = (e) => {
+  const d = JSON.parse(e.data);
+  if (!d.stage) return;
+
+  // 如果 stage 改變就整頁刷新一次（重新渲染 pipeline）
+  const current = '{{ status.stage }}';
+  if (d.stage !== current) {
+    location.reload();
+    return;
+  }
+  // 有 error_msg 時即時顯示警示
+  if (d.error_msg) {
+    let b = document.getElementById('sse-error');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'sse-error';
+      b.className = 'banner banner-warn';
+      b.style.cssText = 'position:fixed;bottom:16px;right:16px;max-width:400px;z-index:99';
+      document.body.appendChild(b);
+    }
+    b.textContent = '⚠️ ' + d.error_msg;
+  }
+};
+evtSrc.onerror = () => {
+  // SSE 斷線時 fallback 到 30 秒刷新
+  setTimeout(() => location.reload(), 30000);
+};
+
+// 腳本審閱快捷
+function goScript() { location.href = '/script'; }
+</script>
 {% endblock %}

@@ -115,8 +115,17 @@ def write_script(research_data: dict) -> dict:
         script = _extract_json(text)
     except (json.JSONDecodeError, ValueError) as e:
         logger.error(f"JSON 解析失敗：{e}")
-        # 把原始文字也存下來，方便手動修復
-        script = {"_raw": text, "_parse_error": str(e)}
+        # 存原始文字供除錯，同時 raise 讓 caller 知道失敗
+        (research_data.get("_out_dir") and None)  # noop
+        raw_path = Path(research_data.get("out_dir", ".")) / "script_raw_failed.txt"
+        try:
+            raw_path.write_text(text, encoding="utf-8")
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Claude 回傳的腳本無法解析為合法 JSON（{e}）。"
+            f"原始回應已存至 {raw_path}，請重新執行或手動修正。"
+        ) from e
 
     script["_meta"] = {
         "news_id": research_data["news_id"],

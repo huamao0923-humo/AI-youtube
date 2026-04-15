@@ -9,17 +9,22 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from datetime import timedelta
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from modules.brief.brief_generator import generate, load_today
 from modules.common.logging_setup import setup_logger
 from modules.database import db_manager
 from modules.database.models import init_db
+from web_ui.auth import login_required, register_auth_routes
 
 setup_logger()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "ai-channel-webui-2026")
+app.permanent_session_lifetime = timedelta(days=30)
+
+register_auth_routes(app)
 
 
 def _stats():
@@ -41,6 +46,7 @@ def _latest_report() -> str | None:
 # ─────────── Pages ───────────
 
 @app.route("/")
+@login_required
 def index():
     brief = load_today() or generate()
     return render_template("index.html",
@@ -51,12 +57,14 @@ def index():
 
 
 @app.route("/refresh")
+@login_required
 def refresh():
     generate()
     return redirect(url_for("index"))
 
 
 @app.route("/select", methods=["POST"])
+@login_required
 def select_topic():
     news_id = int(request.form["news_id"])
     angle   = request.form.get("angle", "A")
@@ -70,6 +78,7 @@ def select_topic():
 
 
 @app.route("/status")
+@login_required
 def status_page():
     status   = db_manager.get_pipeline_status()
     selected = (db_manager.get_news_by_id(status.get("selected_id"))
@@ -82,6 +91,7 @@ def status_page():
 
 
 @app.route("/script")
+@login_required
 def script_review():
     rec = db_manager.load_latest_script()
     script = rec["script"] if rec else None
@@ -92,15 +102,25 @@ def script_review():
 
 
 @app.route("/script/approve", methods=["POST"])
+@login_required
 def script_approve():
     rec = db_manager.load_latest_script()
     if rec:
         db_manager.approve_script(rec["id"])
-    db_manager.set_pipeline_status("tts")
+    db_manager.set_pipeline_status("tts", error_msg=None)
     return redirect(url_for("status_page"))
 
 
+@app.route("/script/regenerate", methods=["POST"])
+@login_required
+def script_regenerate():
+    """重置 pipeline 到 scripting，讓 watcher 知道需要重新生成。"""
+    db_manager.set_pipeline_status("scripting", error_msg=None)
+    return redirect(url_for("script_review"))
+
+
 @app.route("/report")
+@login_required
 def report_page():
     return render_template("report.html",
                            report_md=_latest_report(),
@@ -109,6 +129,7 @@ def report_page():
 
 
 @app.route("/setup")
+@login_required
 def setup_page():
     has_yt    = (PROJECT_ROOT / "config" / "youtube_client_secret.json").exists()
     has_token = (PROJECT_ROOT / "config" / "youtube_token.json").exists()
@@ -127,24 +148,192 @@ def setup_page():
                            active="setup")
 
 
+# ─────────── 評分 Web 入口 ───────────
+
+@app.route("/scoring")
+@login_required
+def scoring_page():
+    """顯示待評分新聞，並提供匯入評分結果的介面。"""
+    pending = db_manager.fetch_news_to_score(limit=50)
+    return render_template("scoring.html",
+                           pending=pending,
+                           stats=_stats(),
+                           active="scoring")
+
+
+@app.route("/api/scoring/export")
+@login_required
+def api_scoring_export():
+    """匯出待評分新聞 JSON（供貼給 Claude Code）。"""
+    pending = db_manager.fetch_news_to_score(limit=50)
+    items = [
+        {
+            "id": r["id"],
+            "title": r["title"],
+            "source_name": r["source_name"],
+            "source_priority": r["source_priority"],
+            "published_at": r.get("published_at"),
+            "summary": (r.get("summary") or "")[:400],
+        }
+        for r in pending
+    ]
+    return jsonify({"count": len(items), "items": items})
+
+
+@app.route("/api/scoring/import", methods=["POST"])
+@login_required
+def api_scoring_import():
+    """接收評分結果 JSON 並寫入 DB。"""
+    data = request.get_json(silent=True)
+    if not data or "results" not in data:
+        return jsonify({"error": "需要 {results: [...]} 格式"}), 400
+
+    from modules.common.config import settings
+    ai_min = settings()["filter"]["ai_score_min"]
+    updates = []
+    for r in data["results"]:
+        try:
+            score = float(r.get("score", 0))
+        except (TypeError, ValueError):
+            score = 0.0
+        updates.append({
+            "id": r["id"],
+            "ai_score": score,
+            "business_angle": r.get("business_angle"),
+            "why_audience_cares": r.get("why_audience_cares"),
+            "suggested_title": r.get("suggested_title"),
+            "skip_reason": r.get("skip_reason"),
+            "status": "candidate" if score >= ai_min else "skipped",
+        })
+
+    db_manager.update_ai_scores(updates)
+    candidates = sum(1 for u in updates if u["status"] == "candidate")
+    return jsonify({"ok": True, "scored": len(updates), "candidates": candidates})
+
+
+# ─────────── 連線測試 API ───────────
+
+@app.route("/api/test/db")
+@login_required
+def api_test_db():
+    try:
+        stats = db_manager.stats_today()
+        return jsonify({"ok": True, "news_total": stats.get("total", 0)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/test/anthropic")
+@login_required
+def api_test_anthropic():
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"ok": False, "error": "ANTHROPIC_API_KEY 未設定"}), 400
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=10,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        return jsonify({"ok": True, "model": resp.model})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 500
+
+
+@app.route("/api/test/youtube")
+@login_required
+def api_test_youtube():
+    secret = PROJECT_ROOT / "config" / "youtube_client_secret.json"
+    token  = PROJECT_ROOT / "config" / "youtube_token.json"
+    if not secret.exists():
+        return jsonify({"ok": False, "error": "client_secret.json 不存在"})
+    if not token.exists():
+        return jsonify({"ok": False, "error": "尚未完成 OAuth2 授權"})
+    try:
+        from modules.publish.youtube_uploader import _build_youtube
+        youtube = _build_youtube()
+        youtube.channels().list(part="id", mine=True).execute()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]})
+
+
+# ─────────── SSE 即時狀態 ───────────
+
+@app.route("/api/sse/status")
+@login_required
+def sse_status():
+    """Server-Sent Events — 推送 pipeline 狀態給瀏覽器。"""
+    import time
+
+    def generate():
+        last = None
+        for _ in range(120):   # 最多推 120 次（2 分鐘），讓客端重連
+            try:
+                status = db_manager.get_pipeline_status()
+                payload = {
+                    "stage": status.get("stage"),
+                    "updated_at": status.get("updated_at"),
+                    "error_msg": status.get("error_msg"),
+                }
+                import json as _json
+                data = _json.dumps(payload)
+                if data != last:
+                    last = data
+                    yield f"data: {data}\n\n"
+            except Exception:
+                yield "data: {}\n\n"
+            time.sleep(5)
+
+    from flask import Response
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache",
+                             "X-Accel-Buffering": "no"})
+
+
+# ─────────── 日誌查看 ───────────
+
+@app.route("/logs")
+@login_required
+def logs_page():
+    log_dir = PROJECT_ROOT / "logs"
+    today = __import__("modules.common.utils", fromlist=["tw_today"]).tw_today()
+    log_file = log_dir / f"{today.replace('-','')}.log"
+    lines = []
+    if log_file.exists():
+        all_lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = all_lines[-200:]   # 最新 200 行
+    return render_template("logs.html",
+                           lines=lines,
+                           log_file=str(log_file),
+                           stats=_stats(),
+                           active="logs")
+
+
 # ─────────── API ───────────
 
 @app.route("/api/status")
+@login_required
 def api_status():
     return jsonify(db_manager.get_pipeline_status())
 
 
 @app.route("/api/brief")
+@login_required
 def api_brief():
     return jsonify(load_today() or generate())
 
 
 @app.route("/api/stats")
+@login_required
 def api_stats():
     return jsonify(_stats())
 
 
 @app.route("/api/pipeline/stage", methods=["POST"])
+@login_required
 def api_set_stage():
     data  = request.get_json(silent=True) or {}
     stage = data.get("stage")

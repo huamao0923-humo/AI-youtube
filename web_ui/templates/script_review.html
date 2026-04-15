@@ -93,11 +93,20 @@
       </div>
       {% endif %}
 
-      <form method="POST" action="/script/approve" style="margin-top:16px">
-        <button type="submit" class="btn btn-success btn-lg" style="width:100%">
-          ✅ 確認腳本，開始製作
-        </button>
-      </form>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+        <form method="POST" action="/script/approve"
+              onsubmit="return confirm('確認後將自動開始配音、圖片、合成流程，確定要繼續嗎？')">
+          <button type="submit" class="btn btn-success btn-lg" style="width:100%">
+            ✅ 確認腳本，開始製作
+          </button>
+        </form>
+        <form method="POST" action="/script/regenerate"
+              onsubmit="return confirm('重新生成將覆蓋現有腳本，確定嗎？')">
+          <button type="submit" class="btn btn-ghost" style="width:100%;font-size:12px">
+            ↻ 重新生成腳本
+          </button>
+        </form>
+      </div>
     </div>
 
   </div>

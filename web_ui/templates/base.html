@@ -35,9 +35,18 @@
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">分析與設定</div>
+        <div class="nav-group-label">工具</div>
+        <a href="/scoring" class="nav-link {% if active == 'scoring' %}active{% endif %}">
+          <span class="nav-icon">🤖</span>評分管理
+          {% if stats and stats.unscored > 0 %}
+          <span class="nav-badge">{{ stats.unscored }}</span>
+          {% endif %}
+        </a>
         <a href="/report" class="nav-link {% if active == 'report' %}active{% endif %}">
           <span class="nav-icon">📊</span>週報分析
+        </a>
+        <a href="/logs" class="nav-link {% if active == 'logs' %}active{% endif %}">
+          <span class="nav-icon">📋</span>系統日誌
         </a>
         <a href="/setup" class="nav-link {% if active == 'setup' %}active{% endif %}">
           <span class="nav-icon">⚙️</span>系統設定
@@ -48,6 +57,9 @@
         <div class="nav-group-label">操作</div>
         <a href="/refresh" class="nav-link">
           <span class="nav-icon">↻</span>重新抓取
+        </a>
+        <a href="/logout" class="nav-link" style="color:var(--red)">
+          <span class="nav-icon">🚪</span>登出
         </a>
       </div>
     </nav>

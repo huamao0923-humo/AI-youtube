@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}評分管理{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>評分管理</h1>
+    <span class="sub">{{ pending|length }} 則待評分</span>
+  </div>
+</div>
+
+<div class="content">
+
+  {% if not pending %}
+  <div class="empty">
+    <div class="empty-icon">✅</div>
+    <div class="empty-title">今日新聞已全部評分</div>
+    <div class="empty-desc">候選池已就緒，前往選題頁開始今日選題。</div>
+  </div>
+  {% else %}
+
+  <div class="banner banner-info" id="workflow-banner">
+    <div>
+      <strong>CoWork 評分流程：</strong>
+      按下「匯出」→ 複製 JSON → 貼給 Claude Code 請它評分 →
+      複製回傳的 JSON → 按「貼上匯入」
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="exportScoring()">⬇ 匯出待評分清單</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('import-area').style.display='block'">
+      ⬆ 貼上匯入評分結果
+    </button>
+  </div>
+
+  <!-- 匯入區 -->
+  <div id="import-area" style="display:none;margin-bottom:20px">
+    <div class="card" style="padding:20px">
+      <div class="section-label" style="margin-bottom:10px">貼上 Claude Code 給的 JSON 陣列</div>
+      <textarea id="import-json"
+        style="width:100%;height:200px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text);font-family:monospace;resize:vertical"
+        placeholder='[{"id": 1, "score": 8.5, "business_angle": "...", ...}]'></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-success" onclick="importScoring()">匯入評分</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('import-area').style.display='none'">取消</button>
+      </div>
+      <div id="import-result" style="margin-top:10px;font-size:13px"></div>
+    </div>
+  </div>
+
+  <!-- 待評分清單 -->
+  <div class="section-label">待評分新聞（{{ pending|length }} 則）</div>
+  <div class="cards">
+    {% for item in pending %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title-block">
+          <div class="card-title" style="font-size:14px">{{ item.title[:100] }}</div>
+          <div class="card-meta">
+            <span>📡 {{ item.source_name }}</span>
+            <span>⭐ 優先 {{ item.source_priority }}/10</span>
+            <span>🔢 本地分 {{ '%.1f'|format(item.local_score) }}</span>
+          </div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);flex-shrink:0">ID: {{ item.id }}</span>
+      </div>
+      {% if item.summary %}
+      <div class="card-body">
+        <div style="font-size:12px;color:var(--text3);line-height:1.6">
+          {{ item.summary[:200] }}{% if item.summary|length > 200 %}…{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function exportScoring() {
+  const resp = await fetch('/api/scoring/export');
+  const data = await resp.json();
+  const json = JSON.stringify(data.items, null, 2);
+  await navigator.clipboard.writeText(json);
+  alert(`已複製 ${data.count} 則待評分新聞到剪貼簿！\n\n請貼給 Claude Code，請它按格式評分後複製回傳 JSON。`);
+}
+
+async function importScoring() {
+  const raw = document.getElementById('import-json').value.trim();
+  let results;
+  try { results = JSON.parse(raw); } catch(e) {
+    document.getElementById('import-result').innerHTML = '<span style="color:var(--red)">JSON 格式錯誤：' + e.message + '</span>';
+    return;
+  }
+  if (!Array.isArray(results)) {
+    document.getElementById('import-result').innerHTML = '<span style="color:var(--red)">需要 JSON 陣列格式</span>';
+    return;
+  }
+  const resp = await fetch('/api/scoring/import', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({results}),
+  });
+  const data = await resp.json();
+  if (data.ok) {
+    document.getElementById('import-result').innerHTML =
+      `<span style="color:var(--green)">✅ 成功匯入 ${data.scored} 則，其中候選 ${data.candidates} 則</span>`;
+    setTimeout(() => location.reload(), 2000);
+  } else {
+    document.getElementById('import-result').innerHTML =
+      '<span style="color:var(--red)">匯入失敗：' + (data.error || '') + '</span>';
+  }
+}
+</script>
+{% endblock %}

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from modules.common.utils import tw_today
 from typing import Any, Iterable
 
 from .models import (
@@ -116,7 +117,7 @@ def hash_exists(content_hash: str) -> bool:
 
 def get_pipeline_status(date: str | None = None) -> dict[str, Any]:
     if not date:
-        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date = tw_today()
     with get_session() as s:
         row = s.query(PipelineStatus).filter_by(date=date).first()
         if not row:
@@ -128,7 +129,7 @@ def get_pipeline_status(date: str | None = None) -> dict[str, Any]:
 
 def set_pipeline_status(stage: str, date: str | None = None, **kwargs) -> None:
     if not date:
-        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date = tw_today()
     now = datetime.now(timezone.utc).isoformat()
     with get_session() as s:
         row = s.query(PipelineStatus).filter_by(date=date).first()
@@ -160,7 +161,7 @@ def save_brief(date: str, content: dict[str, Any], unscored: int = 0) -> None:
 def load_brief(date: str | None = None) -> dict[str, Any] | None:
     import json
     if not date:
-        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date = tw_today()
     with get_session() as s:
         row = s.query(DailyBrief).filter_by(date=date).first()
         if not row:
@@ -219,7 +220,7 @@ def approve_script(script_id: int) -> None:
 # ───────────── 統計 ─────────────
 
 def stats_today() -> dict[str, Any]:
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = tw_today()
     with get_session() as s:
         total = s.query(NewsItem).count()
         candidates = s.query(NewsItem).filter_by(status="candidate").count()
