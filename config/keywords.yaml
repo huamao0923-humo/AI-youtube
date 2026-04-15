@@ -1,0 +1,96 @@
+# 關鍵字評分 — Module 1 對每篇新聞做本地粗分（在送 Claude 前先過濾）
+
+# 高分關鍵字（出現加分）
+high_value_keywords:
+  tier1_score_5:
+    - "GPT-5"
+    - "GPT5"
+    - "Claude 4"
+    - "Claude Opus 4"
+    - "Gemini Ultra"
+    - "Gemini 2"
+    - "AGI"
+    - "raises $"
+    - "billion funding"
+    - "acquisition"
+    - "partnership"
+    - "launched"
+    - "released"
+    - "breakthrough"
+
+  tier2_score_3:
+    - "enterprise AI"
+    - "AI agent"
+    - "multimodal"
+    - "open source"
+    - "API"
+    - "deployment"
+    - "revenue"
+    - "customers"
+    - "replace"
+    - "automation"
+    - "fine-tuning"
+    - "inference"
+
+  tier3_score_1:
+    - "artificial intelligence"
+    - "machine learning"
+    - "large language model"
+    - "LLM"
+    - "neural network"
+    - "AI startup"
+    - "foundation model"
+
+# 排除關鍵字（出現扣分或直接過濾）
+exclude_keywords:
+  - "game AI"
+  - "AI in sports"
+  - "AI-generated music controversy"
+  - "AI girlfriend"
+
+# 重點監控公司
+target_companies:
+  score_5:
+    - "OpenAI"
+    - "Anthropic"
+    - "Google DeepMind"
+    - "Meta AI"
+    - "Apple Intelligence"
+    - "NVIDIA"
+  score_3:
+    - "Microsoft Copilot"
+    - "xAI"
+    - "Grok"
+    - "Mistral"
+    - "Perplexity"
+    - "Cohere"
+    - "Runway"
+    - "ElevenLabs"
+  score_2:
+    - "Hugging Face"
+    - "Stability AI"
+    - "Midjourney"
+    - "Character.ai"
+    - "Inflection"
+    - "Groq"
+    - "Together AI"
+
+# 商業影響力加分
+business_signals:
+  score_3:
+    - "$"
+    - "billion"
+    - "million"
+    - "revenue"
+    - "profit"
+    - "IPO"
+    - "valuation"
+  score_2:
+    - "CEO"
+    - "hired"
+    - "fired"
+    - "regulation"
+    - "ban"
+    - "lawsuit"
+    - "Congress"
+    - "EU AI Act"

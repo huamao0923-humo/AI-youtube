@@ -1,0 +1,36 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# 資料 / 產物
+data/channel.db
+data/channel.db-journal
+data/news_cache/*
+!data/news_cache/.gitkeep
+data/scripts/*
+!data/scripts/.gitkeep
+data/audio/*
+!data/audio/.gitkeep
+data/images/*
+!data/images/.gitkeep
+data/videos/*
+!data/videos/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# 聲音樣本（個人隱私）
+voice_samples/raw/*
+voice_samples/processed/*
+!voice_samples/.gitkeep
+
+# YouTube 認證
+config/youtube_client_secret.json
+config/youtube_token.json
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,8 @@
+# Railway 部署只需這些（不含本地 TTS/ComfyUI 等重型套件）
+flask>=3.0.3
+SQLAlchemy>=2.0.30
+psycopg2-binary>=2.9.9
+PyYAML>=6.0.1
+python-dotenv>=1.0.1
+loguru>=0.7.2
+gunicorn>=22.0.0

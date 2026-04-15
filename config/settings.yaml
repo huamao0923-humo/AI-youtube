@@ -1,0 +1,58 @@
+# 系統設定（不含敏感資訊 — 敏感資訊放 .env）
+
+paths:
+  data_root: "./data"
+  news_cache: "./data/news_cache"
+  scripts: "./data/scripts"
+  audio: "./data/audio"
+  images: "./data/images"
+  videos: "./data/videos"
+  voice_samples: "./voice_samples"
+  templates: "./templates"
+  logs: "./logs"
+  db: "./data/channel.db"
+
+scraper:
+  http_timeout_seconds: 15
+  max_retries: 3
+  per_source_delay_seconds: 2
+  concurrent_requests: 8
+  user_agent: "AI-Channel-Bot/1.0 (+https://example.com/contact)"
+  # 抓取今日起往回幾小時內的新聞（處理時區差）
+  lookback_hours: 36
+
+filter:
+  # 本地粗分門檻：低於此分數直接丟棄，不送 Claude
+  local_score_min: 1
+  # Claude 評分後保留門檻
+  ai_score_min: 6
+  # 一次送給 Claude 評分的新聞批次大小
+  batch_size: 10
+
+claude:
+  model: "claude-opus-4-6"
+  max_tokens: 4096
+  temperature: 0.3
+
+tts:
+  engine: "xtts"  # "xtts" or "elevenlabs"
+  voice_sample: "voice_samples/processed/best_sample.wav"
+  language: "zh-tw"
+
+comfyui:
+  host: "http://localhost:8188"
+  default_model: "flux1-schnell"
+  steps: 4
+
+video:
+  resolution: "1920x1080"
+  fps: 30
+  publish_time: "20:00"  # 台灣時間
+
+youtube:
+  channel_name: "AI 商業觀察"
+  default_category: 28  # Science & Technology
+  default_privacy: "private"  # 第一次測試用 private
+
+telegram:
+  enabled: true

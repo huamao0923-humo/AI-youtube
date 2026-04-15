@@ -1,0 +1,272 @@
+# 新聞來源設定 — Module 1 爬蟲讀取此檔
+# priority: 1-10，分數越高優先度越高（會作為評分基礎加權）
+# scrape_method: rss | scrape | rss_or_scrape | hn_api | reddit_api | json_api
+
+# ============================================================
+# 科技巨頭官方部落格（最高優先級，獨家第一手消息）
+# ============================================================
+official_blogs:
+  - name: "OpenAI Blog"
+    url: "https://openai.com/blog"
+    rss: "https://openai.com/blog/rss.xml"
+    priority: 10
+    scrape_method: "rss"
+
+  - name: "Anthropic News"
+    url: "https://www.anthropic.com/news"
+    rss: null
+    priority: 10
+    scrape_method: "scrape"
+
+  - name: "Google DeepMind Blog"
+    url: "https://deepmind.google/discover/blog/"
+    rss: "https://deepmind.google/blog/rss.xml"
+    priority: 10
+    scrape_method: "rss"
+
+  - name: "Google AI Blog"
+    url: "https://blog.google/technology/ai/"
+    rss: "https://blog.google/technology/ai/rss/"
+    priority: 10
+    scrape_method: "rss"
+
+  - name: "Meta AI Blog"
+    url: "https://ai.meta.com/blog/"
+    rss: null
+    priority: 10
+    scrape_method: "scrape"
+
+  - name: "Microsoft AI Blog"
+    url: "https://blogs.microsoft.com/ai/"
+    rss: "https://blogs.microsoft.com/ai/feed/"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "NVIDIA AI Blog"
+    url: "https://blogs.nvidia.com/blog/category/artificial-intelligence/"
+    rss: "https://blogs.nvidia.com/feed/"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "AWS Machine Learning Blog"
+    url: "https://aws.amazon.com/blogs/machine-learning/"
+    rss: "https://aws.amazon.com/blogs/machine-learning/feed/"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "Apple Machine Learning Research"
+    url: "https://machinelearning.apple.com/"
+    rss: "https://machinelearning.apple.com/research/?format=rss"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "Mistral AI News"
+    url: "https://mistral.ai/news/"
+    rss: null
+    priority: 9
+    scrape_method: "scrape"
+
+  - name: "xAI News"
+    url: "https://x.ai/news"
+    rss: null
+    priority: 9
+    scrape_method: "scrape"
+
+  - name: "Cohere Blog"
+    url: "https://cohere.com/blog"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+  - name: "Hugging Face Blog"
+    url: "https://huggingface.co/blog"
+    rss: "https://huggingface.co/blog/feed.xml"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "Stability AI Blog"
+    url: "https://stability.ai/news"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+  - name: "Perplexity AI Blog"
+    url: "https://www.perplexity.ai/hub/blog"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+# ============================================================
+# 頂級科技媒體
+# ============================================================
+tech_media:
+  - name: "TechCrunch AI"
+    rss: "https://techcrunch.com/category/artificial-intelligence/feed/"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "The Verge AI"
+    rss: "https://www.theverge.com/rss/index.xml"
+    priority: 9
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "OpenAI", "Anthropic", "Gemini", "LLM"]
+
+  - name: "Wired AI"
+    rss: "https://www.wired.com/feed/category/artificial-intelligence/latest/rss"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "Ars Technica AI"
+    rss: "https://feeds.arstechnica.com/arstechnica/index"
+    priority: 8
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "machine learning", "LLM"]
+
+  - name: "MIT Technology Review"
+    rss: "https://www.technologyreview.com/feed/"
+    priority: 9
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence"]
+
+  - name: "VentureBeat AI"
+    rss: "https://venturebeat.com/feed/"
+    priority: 9
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "LLM", "OpenAI", "Anthropic", "machine learning"]
+
+  - name: "Bloomberg Technology"
+    rss: "https://feeds.bloomberg.com/technology/news.rss"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "Reuters Technology"
+    rss: "https://feeds.reuters.com/reuters/technology"
+    priority: 8
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "OpenAI", "Google", "Microsoft"]
+
+  - name: "The Information AI"
+    url: "https://www.theinformation.com/technology/artificial-intelligence"
+    rss: null
+    priority: 10
+    scrape_method: "scrape"
+    note: "paywall - scrape headlines only"
+
+  - name: "Fortune AI"
+    rss: "https://fortune.com/feed/"
+    priority: 8
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "OpenAI", "machine learning"]
+
+  - name: "Business Insider Tech"
+    rss: "https://feeds.businessinsider.com/custom/all"
+    priority: 7
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "OpenAI", "Google AI"]
+
+  - name: "CNBC Technology"
+    rss: "https://www.cnbc.com/id/19854910/device/rss/rss.html"
+    priority: 8
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence"]
+
+# ============================================================
+# 社群與研究
+# ============================================================
+community_research:
+  - name: "Hacker News Top"
+    url: "https://hacker-news.firebaseio.com/v0"
+    priority: 8
+    scrape_method: "hn_api"
+    min_score: 200
+
+  - name: "Reddit r/artificial"
+    url: "https://www.reddit.com/r/artificial/top/.json?t=day&limit=25"
+    priority: 7
+    scrape_method: "reddit_api"
+
+  - name: "Reddit r/MachineLearning"
+    url: "https://www.reddit.com/r/MachineLearning/top/.json?t=day&limit=25"
+    priority: 8
+    scrape_method: "reddit_api"
+
+  - name: "Reddit r/LocalLLaMA"
+    url: "https://www.reddit.com/r/LocalLLaMA/top/.json?t=day&limit=25"
+    priority: 7
+    scrape_method: "reddit_api"
+
+  - name: "ArXiv CS.AI"
+    rss: "https://arxiv.org/rss/cs.AI"
+    priority: 7
+    scrape_method: "rss"
+
+  - name: "Papers With Code Latest"
+    url: "https://paperswithcode.com/latest"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+# ============================================================
+# AI 商業應用專業媒體
+# ============================================================
+ai_business_media:
+  - name: "AI Business"
+    rss: "https://aibusiness.com/rss.xml"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "The Batch (DeepLearning.AI)"
+    rss: "https://www.deeplearning.ai/the-batch/feed"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "Import AI (Jack Clark)"
+    url: "https://importai.substack.com/"
+    rss: "https://importai.substack.com/feed"
+    priority: 9
+    scrape_method: "rss"
+
+  - name: "The Decoder"
+    rss: "https://the-decoder.com/feed/"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "Weights & Biases Blog"
+    rss: "https://wandb.ai/fully-connected/feed.xml"
+    priority: 7
+    scrape_method: "rss"
+
+  - name: "Scale AI Blog"
+    url: "https://scale.com/blog"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+  - name: "Runway Research"
+    url: "https://runwayml.com/research/"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+# ============================================================
+# 融資 / 商業新聞
+# ============================================================
+business_funding:
+  - name: "Crunchbase News AI"
+    rss: "https://news.crunchbase.com/feed/"
+    priority: 8
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence", "machine learning"]
+
+  - name: "PitchBook AI deals"
+    url: "https://pitchbook.com/news/articles"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+    filter_keywords: ["AI", "artificial intelligence"]
+
+  - name: "Axios AI"
+    rss: "https://www.axios.com/feeds/feed.rss"
+    priority: 8
+    scrape_method: "rss"
+    filter_keywords: ["AI", "artificial intelligence"]
