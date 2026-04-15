@@ -14,12 +14,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import json
+
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from modules.brief.brief_generator import generate, load_today
 from modules.common.logging_setup import setup_logger
 from modules.database import db_manager
 from modules.database.models import init_db
+
+SCRIPTS_DIR = PROJECT_ROOT / "data" / "scripts"
 
 setup_logger()
 app = Flask(__name__)
@@ -70,6 +74,31 @@ def status_page():
     status   = db_manager.get_pipeline_status()
     selected = db_manager.get_news_by_id(status.get("selected_id")) if status.get("selected_id") else None
     return render_template("status.html", status=status, selected=selected)
+
+
+# ─────────── 腳本審閱 ───────────
+
+def _load_latest_script() -> dict | None:
+    """讀取最新的 script.json（按資料夾名稱排序）。"""
+    scripts = sorted(SCRIPTS_DIR.glob("*/script.json"), reverse=True)
+    if not scripts:
+        return None
+    try:
+        return json.loads(scripts[0].read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+@app.route("/script")
+def script_review():
+    script = _load_latest_script()
+    return render_template("script_review.html", script=script)
+
+
+@app.route("/script/approve", methods=["POST"])
+def script_approve():
+    db_manager.set_pipeline_status("tts")
+    return redirect(url_for("status_page"))
 
 
 # ─────────── API ───────────
