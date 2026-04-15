@@ -1,0 +1,402 @@
+[
+  {
+    "id": 13,
+    "score": 8.5,
+    "business_angle": "Anthropic 投入 1 億美元建立合作夥伴網路，代表 Claude 正積極向企業生態系滲透，是 OpenAI 以外最具規模的 B2B AI 布局之一。",
+    "why_audience_cares": "台灣企業與開發者若想用 Claude 做商業應用，這個合作網路直接影響取得成本與支援品質。",
+    "suggested_title": "Anthropic 砸億元建生態！Claude 要搶企業市場",
+    "skip_reason": null
+  },
+  {
+    "id": 11,
+    "score": 9.0,
+    "business_angle": "Anthropic 與 Google、Broadcom 合作取得多吉瓦算力，意味著 Claude 的規模化部署不再受限，直接影響未來模型能力上限。",
+    "why_audience_cares": "這是算力軍備競賽的新篇章，台灣觀眾關心 AI 基礎設施走向，此消息預示 Claude 將大幅擴產。",
+    "suggested_title": "Anthropic 聯手 Google！搶下數吉瓦算力大單",
+    "skip_reason": null
+  },
+  {
+    "id": 9,
+    "score": 9.5,
+    "business_angle": "Claude Opus 4.6 在 Agentic coding、Computer Use、金融等核心場景全面領先，代表 Anthropic 在企業 AI 實用性上已超越競爭對手。",
+    "why_audience_cares": "台灣開發者大量使用 Claude，新旗艦模型直接影響工具選擇與生產力，高度相關。",
+    "suggested_title": "Claude Opus 4.6 來了！Anthropic 這次真的贏了",
+    "skip_reason": null
+  },
+  {
+    "id": 10,
+    "score": 6.0,
+    "business_angle": "Anthropic 長期利益信託引入諾華 CEO，彰顯公司治理走向正規化，對吸引傳統機構投資者有正面信號。",
+    "why_audience_cares": "Anthropic 的公司結構特殊，董事會人事象徵其向主流資本市場靠攏的意圖。",
+    "suggested_title": "Anthropic 治理升級！迎來諾華 CEO 加入董事會",
+    "skip_reason": null
+  },
+  {
+    "id": 12,
+    "score": 7.0,
+    "business_angle": "澳洲政府與 Anthropic 簽署 AI 安全合作備忘錄，是政府層級採納 Claude 的重要里程碑，可能帶動亞太其他政府跟進。",
+    "why_audience_cares": "台灣觀眾關注政府如何監管與採用 AI，澳洲案例具參考價值。",
+    "suggested_title": "澳洲政府簽約 Anthropic！AI 安全合作新里程碑",
+    "skip_reason": null
+  },
+  {
+    "id": 14,
+    "score": 6.5,
+    "business_angle": "Anthropic Institute 是獨立 AI 安全研究機構，長期影響全球 AI 治理政策走向，代表 Anthropic 在技術以外的影響力布局。",
+    "why_audience_cares": "AI 安全議題日益受到台灣政策圈關注，Anthropic 成立專責機構值得追蹤。",
+    "suggested_title": "Anthropic 成立 AI 安全研究所！影響力超越商業",
+    "skip_reason": null
+  },
+  {
+    "id": 15,
+    "score": 5.5,
+    "business_angle": "Anthropic 在亞太設立第四個辦公室，雪梨將成為亞太區重要據點，顯示公司積極進軍亞太市場。",
+    "why_audience_cares": "對台灣用戶而言，Anthropic 擴張至亞太代表服務品質與在地支援可能改善。",
+    "suggested_title": "Anthropic 進軍亞太！雪梨成第四個辦公室",
+    "skip_reason": null
+  },
+  {
+    "id": 16,
+    "score": 4.5,
+    "business_angle": "電商新創利用 Meta SAM 技術打造 AI 試衣功能，是垂直領域 AI 應用的具體案例。",
+    "why_audience_cares": "故事性不強，屬小型應用案例，對一般台灣觀眾吸引力有限。",
+    "suggested_title": null,
+    "skip_reason": "小型案例研究，商業影響力有限，不足以支撐一集影片。"
+  },
+  {
+    "id": 18,
+    "score": 1.0,
+    "business_angle": "Meta AI 探索頁面，屬宣傳內容。",
+    "why_audience_cares": "無實質新聞價值。",
+    "suggested_title": null,
+    "skip_reason": "為 Meta AI 產品頁導覽連結，非新聞，無製作價值。"
+  },
+  {
+    "id": 17,
+    "score": 7.0,
+    "business_angle": "Meta 兩年內推出四代自研 MTIA AI 晶片，代表科技巨頭去 NVIDIA 化的具體進展，影響整個 AI 晶片供應鏈格局。",
+    "why_audience_cares": "台灣半導體產業高度關注 AI 晶片市場，Meta 自研晶片策略直接影響台灣供應商。",
+    "suggested_title": "Meta 兩年四顆 AI 晶片！自研路線要擺脫 NVIDIA？",
+    "skip_reason": null
+  },
+  {
+    "id": 47,
+    "score": 4.5,
+    "business_angle": "採購自動化新創完成小額融資，AI 滲透企業後台流程的趨勢案例之一。",
+    "why_audience_cares": "融資金額過小（$2.1M），故事性不足，難以支撐完整一集。",
+    "suggested_title": null,
+    "skip_reason": "融資規模太小，缺乏足夠的故事性與商業影響力。"
+  },
+  {
+    "id": 61,
+    "score": 8.0,
+    "business_angle": "Accel 以 Anthropic、Cursor、Perplexity 等 AI 新創投資組合為背書，募集 50 億美元新基金，顯示 AI 投資熱度不減。",
+    "why_audience_cares": "台灣觀眾關心 AI 投資趨勢，這筆基金規模巨大且聚焦最熱門 AI 公司，象徵意義強。",
+    "suggested_title": "Accel 募 50 億！Anthropic 與 Cursor 背後的金主押注 AI",
+    "skip_reason": null
+  },
+  {
+    "id": 42,
+    "score": 8.5,
+    "business_angle": "部分 OpenAI 投資者轉向 Anthropic，因前者需要 1.2 兆美元 IPO 估值才能回本，Anthropic 的 3800 億相對合理，資本市場正在重新定價 AI。",
+    "why_audience_cares": "OpenAI vs Anthropic 的競爭是台灣觀眾最關注的 AI 話題之一，投資者信心轉向更具戲劇性。",
+    "suggested_title": "OpenAI 投資人倒戈 Anthropic！誰才是 AI 真贏家",
+    "skip_reason": null
+  },
+  {
+    "id": 49,
+    "score": 7.5,
+    "business_angle": "Microsoft 推出更便宜快速的 MAI-Image-2-Efficient，直接挑戰 OpenAI DALL-E 與 Midjourney，企業圖像生成市場競爭白熱化。",
+    "why_audience_cares": "台灣設計師與企業用戶廣泛使用 AI 圖片工具，更便宜的選項直接影響工作流程。",
+    "suggested_title": "Microsoft 發 AI 圖片模型！比 DALL-E 便宜一半",
+    "skip_reason": null
+  },
+  {
+    "id": 59,
+    "score": 9.0,
+    "business_angle": "Anthropic 估值達 8000 億美元，已接近 1 兆美元門檻，創下 AI 新創歷史新高，反映市場對 Claude 商業前景極度樂觀。",
+    "why_audience_cares": "Anthropic 估值屢創新高是台灣 AI 圈年度熱話，8000 億的數字震撼，觀眾高度有感。",
+    "suggested_title": "Anthropic 估值衝 8000 億！AI 新創市值天花板在哪",
+    "skip_reason": null
+  },
+  {
+    "id": 48,
+    "score": 8.0,
+    "business_angle": "Claude Managed Agents 讓企業一站式部署 AI Agent，降低技術門檻但帶來供應商鎖定風險，是 Anthropic 企業策略的核心動作。",
+    "why_audience_cares": "台灣企業正大量評估 AI Agent 導入方案，Claude Managed Agents 直接影響選型決策。",
+    "suggested_title": "Claude 推企業 AI Agent 平台！方便背後的鎖定風險",
+    "skip_reason": null
+  },
+  {
+    "id": 70,
+    "score": 1.5,
+    "business_angle": "印尼魚業新創財務醜聞，與 AI 無關。",
+    "why_audience_cares": "與頻道主題完全無關。",
+    "suggested_title": null,
+    "skip_reason": "與 AI 主題無關，屬一般商業詐欺新聞。"
+  },
+  {
+    "id": 53,
+    "score": 7.0,
+    "business_angle": "a16z 投入 5000 萬美元支持 AI 政治遊說，顯示矽谷 AI 巨頭正積極影響美國 AI 監管政策走向。",
+    "why_audience_cares": "AI 監管政策是台灣 AI 產業關注的國際趨勢，a16z 的政治投入可能影響未來全球 AI 規則。",
+    "suggested_title": "a16z 砸 5000 萬玩政治！矽谷要自己決定 AI 法規",
+    "skip_reason": null
+  },
+  {
+    "id": 46,
+    "score": 8.5,
+    "business_angle": "Adobe Firefly AI Assistant 可從單一提示詞跨 Photoshop、Premiere、Illustrator 執行複雜工作流，是創意 AI 領域最大幅度的 Agentic 整合。",
+    "why_audience_cares": "台灣設計師與影片創作者高度依賴 Adobe 產品，這次更新直接改變創作流程，高度相關。",
+    "suggested_title": "Adobe AI 大革命！一句話控制 PS、PR、AI 全套工具",
+    "skip_reason": null
+  },
+  {
+    "id": 51,
+    "score": 7.5,
+    "business_angle": "調查顯示 43% 的 AI 生成程式碼在生產環境需要除錯，揭示 AI 輔助開發的隱藏成本，對企業採購決策有直接影響。",
+    "why_audience_cares": "台灣軟體開發者大量使用 GitHub Copilot、Cursor 等工具，這個數據直接影響他們對 AI 編碼的信心。",
+    "suggested_title": "AI 寫的程式 43% 有問題！企業買單前要看這個數據",
+    "skip_reason": null
+  },
+  {
+    "id": 40,
+    "score": 6.0,
+    "business_angle": "Gitar 以 AI Agent 自動審查 AI 生成程式碼的安全漏洞，是「用 AI 監控 AI」的新興市場趨勢。",
+    "why_audience_cares": "AI 資安是台灣企業導入 AI 的主要顧慮之一，這個切入點有教育意義。",
+    "suggested_title": "用 AI 審查 AI 程式碼！資安新創 Gitar 獲 900 萬美元",
+    "skip_reason": null
+  },
+  {
+    "id": 41,
+    "score": 6.5,
+    "business_angle": "Parasail 押注 Token 效率最大化將催生下一個算力巨頭，Series A 3200 萬顯示資本開始注意 AI 推論效率市場。",
+    "why_audience_cares": "AI 推論成本是業界關注焦點，這個新的商業邏輯值得介紹給台灣開發者社群。",
+    "suggested_title": "押注 Token 效率！新創 Parasail 想成為 AI 算力新霸主",
+    "skip_reason": null
+  },
+  {
+    "id": 50,
+    "score": 7.0,
+    "business_angle": "Databricks 研究顯示多步驟 AI Agent 在混合查詢上比更強的模型好 21%，改變企業選型邏輯：架構比模型規模更重要。",
+    "why_audience_cares": "台灣企業正在評估 AI Agent 架構，這份研究直接影響建置策略，具實用參考價值。",
+    "suggested_title": "更強的模型輸了！Databricks 研究：Agent 架構才是關鍵",
+    "skip_reason": null
+  },
+  {
+    "id": 52,
+    "score": 7.0,
+    "business_angle": "Allbirds 羊毛鞋品牌賣掉鞋業後轉型 AI 算力基礎設施，股價暴漲 461%，反映市場對 AI 概念股的狂熱程度。",
+    "why_audience_cares": "這個故事極具戲劇性，象徵 AI 概念的市場泡沫風險，台灣投資者高度有感。",
+    "suggested_title": "賣鞋公司改做 AI！Allbirds 轉型後股價暴漲 461%",
+    "skip_reason": null
+  },
+  {
+    "id": 54,
+    "score": 1.0,
+    "business_angle": "HPE 與 Mike Lynch 遺產糾紛，與 AI 無關。",
+    "why_audience_cares": "與頻道主題無關。",
+    "suggested_title": null,
+    "skip_reason": "商業法律糾紛，與 AI 完全無關。"
+  },
+  {
+    "id": 55,
+    "score": 2.0,
+    "business_angle": "CATL 關鍵礦物安全布局，與 AI 關係間接。",
+    "why_audience_cares": "與 AI 主題關聯性不足。",
+    "suggested_title": null,
+    "skip_reason": "電池材料供應鏈議題，與 AI 頻道定位不符。"
+  },
+  {
+    "id": 60,
+    "score": 2.5,
+    "business_angle": "Amazon 進入藝術畫框電視市場，與 AI 關係薄弱。",
+    "why_audience_cares": "非 AI 主題新聞。",
+    "suggested_title": null,
+    "skip_reason": "消費電子產品競爭，非 AI 核心議題。"
+  },
+  {
+    "id": 64,
+    "score": 7.5,
+    "business_angle": "Microsoft 接管 OpenAI 在挪威的 Stargate 資料中心，顯示兩大 AI 巨頭的合作關係出現新的緊張信號。",
+    "why_audience_cares": "OpenAI 與 Microsoft 的關係變化是台灣 AI 圈最關心的產業動態之一，資料中心的易主具象徵意義。",
+    "suggested_title": "Microsoft 接管 OpenAI 機房！兩大巨頭裂痕加深？",
+    "skip_reason": null
+  },
+  {
+    "id": 66,
+    "score": 7.5,
+    "business_angle": "頂級量化交易公司 Jane Street 追加 10 億投資 CoreWeave 並承諾 60 億採購，傳統金融機構押注 AI 算力基礎設施的最大案例。",
+    "why_audience_cares": "金融與 AI 的交叉點始終是台灣觀眾興趣熱區，Jane Street 的大額押注象徵 AI 基礎設施的確定性。",
+    "suggested_title": "量化交易巨頭砸 60 億買 AI 算力！Jane Street 為何押注 CoreWeave",
+    "skip_reason": null
+  },
+  {
+    "id": 67,
+    "score": 3.0,
+    "business_angle": "西班牙資料中心合作案，AI 基礎設施相關但地域性強。",
+    "why_audience_cares": "對台灣觀眾吸引力有限。",
+    "suggested_title": null,
+    "skip_reason": "歐洲地區性基礎設施投資，對台灣觀眾吸引力不足。"
+  },
+  {
+    "id": 68,
+    "score": 1.0,
+    "business_angle": "電商供應鏈故事，與 AI 無關。",
+    "why_audience_cares": "與頻道主題無關。",
+    "suggested_title": null,
+    "skip_reason": "服飾電商供應鏈報導，與 AI 主題無關。"
+  },
+  {
+    "id": 69,
+    "score": 6.5,
+    "business_angle": "Thoma Bravo 旗下數十家軟體公司將大規模導入 Google Cloud AI，代表私募股權開始系統性推動 AI 轉型。",
+    "why_audience_cares": "台灣企業軟體用戶可能直接受到 Thoma Bravo 被投公司 AI 化的影響。",
+    "suggested_title": "私募股權巨頭 Thoma Bravo 押注 Google AI！企業 AI 化時代來了",
+    "skip_reason": null
+  },
+  {
+    "id": 73,
+    "score": 5.0,
+    "business_angle": "洛克菲勒資本管理強調客戶持續關注 AI 投資機會，機構投資信心指標。",
+    "why_audience_cares": "資訊量不足，屬一般市場評論，故事性低。",
+    "suggested_title": null,
+    "skip_reason": "資產管理公司的泛泛市場評論，缺乏具體新聞價值。"
+  },
+  {
+    "id": 33,
+    "score": 5.0,
+    "business_angle": "NVIDIA GPU 加速 Adobe Premiere 色彩校正，屬 GPU 應用場景拓展，商業影響力中等。",
+    "why_audience_cares": "對影片創作者有參考價值，但不足以獨立成集。",
+    "suggested_title": null,
+    "skip_reason": "技術性更新，缺乏足夠新聞價值獨立成集，可作為其他影片的補充素材。"
+  },
+  {
+    "id": 43,
+    "score": 7.5,
+    "business_angle": "Anthropic 一邊告政府一邊向 Trump 政府簡報 Mythos 計畫，揭示 AI 公司的政治博弈策略，商業與監管的矛盾張力高。",
+    "why_audience_cares": "AI 公司與政府的複雜關係是台灣觀眾理解 AI 產業生態的重要切入點。",
+    "suggested_title": "Anthropic 邊告政府邊配合！AI 公司如何玩轉政治博弈",
+    "skip_reason": null
+  },
+  {
+    "id": 44,
+    "score": 7.0,
+    "business_angle": "Snap 裁員 16% 同時宣示 AI 優先策略，科技公司「用 AI 替換人力」趨勢的最新案例，影響整個科技就業市場。",
+    "why_audience_cares": "AI 取代工作是台灣最多人關心的 AI 議題之一，Snap 案例具體而直觀。",
+    "suggested_title": "Snap 裁員 1000 人押注 AI！科技業的人力替換潮來了",
+    "skip_reason": null
+  },
+  {
+    "id": 45,
+    "score": 6.0,
+    "business_angle": "MIT 科技評論預告 2026 年十大突破技術，是年度重要 AI 趨勢指標。",
+    "why_audience_cares": "MIT 的評選具高度公信力，可作為年度 AI 趨勢的參考依據，但目前只是預告。",
+    "suggested_title": null,
+    "skip_reason": "僅為預告內容，等正式名單發布後再製作更有價值。"
+  },
+  {
+    "id": 32,
+    "score": 6.5,
+    "business_angle": "NVIDIA 論述 AI 基礎設施的核心成本指標應轉向「每 Token 成本」，重新定義 AI 算力的評估框架，影響企業採購決策。",
+    "why_audience_cares": "對台灣企業 IT 決策者和開發者有實用參考價值，教育性強。",
+    "suggested_title": "NVIDIA：評估 AI 算力別看 GPU 數量！每 Token 成本才是關鍵",
+    "skip_reason": null
+  },
+  {
+    "id": 39,
+    "score": 6.5,
+    "business_angle": "Allbirds 出售鞋業核心業務後改名 NewBird AI，轉型 AI 算力基礎設施，是傳統品牌追逐 AI 熱潮的極端案例。",
+    "why_audience_cares": "這個故事極具戲劇效果，象徵 AI 泡沫時代的荒誕現象，對台灣觀眾有高度娛樂教育價值。",
+    "suggested_title": null,
+    "skip_reason": "與 id:52 為同一事件不同報導，id:52 摘要更完整，建議選 id:52。"
+  },
+  {
+    "id": 56,
+    "score": 4.0,
+    "business_angle": "Snap 裁員報導，與 id:44 重複。",
+    "why_audience_cares": "重複報導，建議選 id:44 版本（TechCrunch，細節更豐富）。",
+    "suggested_title": null,
+    "skip_reason": "與 id:44 為同一事件重複報導，建議使用 id:44。"
+  },
+  {
+    "id": 58,
+    "score": 1.0,
+    "business_angle": "馬斯克南非股權規定爭議，與 AI 無關。",
+    "why_audience_cares": "與頻道主題無關。",
+    "suggested_title": null,
+    "skip_reason": "非 AI 主題，屬南非商業政策糾紛。"
+  },
+  {
+    "id": 72,
+    "score": 6.0,
+    "business_angle": "Unitree 在 AliExpress 開賣最便宜的人形機器人，以平價策略搶攻全球市場，直接挑戰 Tesla Optimus。",
+    "why_audience_cares": "人形機器人是台灣觀眾高度關注的 AI 硬體話題，中國廉價機器人衝擊市場的故事很吸引人。",
+    "suggested_title": "中國機器人攻 AliExpress！比 Tesla Optimus 便宜多少",
+    "skip_reason": null
+  },
+  {
+    "id": 19,
+    "score": 8.0,
+    "business_angle": "Mistral 推出開源權重的前沿 TTS 模型 Voxtral，即時自適應、高擬真語音，直接衝擊 ElevenLabs 等商業 TTS 市場。",
+    "why_audience_cares": "台灣 AI 開發者高度關注開源 TTS 進展，Voxtral 可能取代付費服務，實用性極強。",
+    "suggested_title": "Mistral 推免費語音 AI！ElevenLabs 的商業模式危了",
+    "skip_reason": null
+  },
+  {
+    "id": 57,
+    "score": 7.5,
+    "business_angle": "歐盟以反競爭為由威脅臨時禁止 Meta WhatsApp AI 功能，是 AI 生態壟斷的首個重大監管動作。",
+    "why_audience_cares": "台灣廣泛使用 LINE 與 WhatsApp，EU 此舉影響全球 AI 平台競爭生態，台灣觀眾有感。",
+    "suggested_title": "歐盟要封殺 WhatsApp AI！Meta 反壟斷大戰開打",
+    "skip_reason": null
+  },
+  {
+    "id": 71,
+    "score": 3.0,
+    "business_angle": "EU 年齡驗證 App，與 AI 關聯較弱。",
+    "why_audience_cares": "對 AI 頻道觀眾吸引力不足。",
+    "suggested_title": null,
+    "skip_reason": "社群媒體監管議題，AI 關聯性不足。"
+  },
+  {
+    "id": 62,
+    "score": 6.0,
+    "business_angle": "Aixtron 是 AI 晶片製造設備供應商，股價創 25 年新高反映 AI 晶片需求對整個設備生態系的帶動效應。",
+    "why_audience_cares": "台灣半導體設備業者高度關注 AI 晶片需求溢出效應，Aixtron 是觀察指標之一。",
+    "suggested_title": "AI 帶動晶片設備股創高！Aixtron 25 年來最強漲勢",
+    "skip_reason": null
+  },
+  {
+    "id": 63,
+    "score": 6.0,
+    "business_angle": "韓國超越中國成為 ASML 最大客戶，AI 記憶體需求帶動 HBM 投資爆發，直接影響台灣半導體供應鏈。",
+    "why_audience_cares": "台灣半導體產業深受 AI 晶片需求影響，ASML 客戶結構變化對台積電等有連動意義。",
+    "suggested_title": "韓國超車中國！AI 熱潮讓 ASML 訂單版圖大洗牌",
+    "skip_reason": null
+  },
+  {
+    "id": 65,
+    "score": 7.0,
+    "business_angle": "Moody's 示警 AI 高度曝險的貸款機構出現信用壓力訊號，AI 泡沫風險開始從科技業蔓延至金融體系。",
+    "why_audience_cares": "台灣投資人高度關注 AI 泡沫風險，Moody's 的警示具高可信度，直接影響投資判斷。",
+    "suggested_title": "Moody's 警告！AI 泡沫開始衝擊銀行信用風險",
+    "skip_reason": null
+  },
+  {
+    "id": 393,
+    "score": 9.5,
+    "business_angle": "Anthropic 即將推出 Opus 4.7 並搶進設計工具市場與 Adobe、Figma 正面競爭，同時估值衝 8000 億，多個爆炸性消息同時出現。",
+    "why_audience_cares": "Anthropic 新模型即將發布是台灣 AI 社群最熱門話題，搶進設計工具更是意外的商業突破。",
+    "suggested_title": "Anthropic 要推 Opus 4.7！還要打進設計市場搶 Adobe 飯碗",
+    "skip_reason": null
+  },
+  {
+    "id": 413,
+    "score": 1.0,
+    "business_angle": "委內瑞拉銀行制裁鬆綁，與 AI 無關。",
+    "why_audience_cares": "與頻道主題完全無關。",
+    "suggested_title": null,
+    "skip_reason": "美國對委內瑞拉制裁政策，與 AI 主題無關。"
+  }
+]

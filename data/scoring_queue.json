@@ -1,0 +1,402 @@
+[
+  {
+    "id": 13,
+    "title": "Mar 12, 2026 Announcements Anthropic invests $100 million into the Claude Partner Network",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 11,
+    "title": "Apr 6, 2026 Announcements Anthropic expands partnership with Google and Broadcom for multiple gigawatts of next-generation compute",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 9,
+    "title": "Announcements Feb 5, 2026 Introducing Claude Opus 4.6 We’re upgrading our smartest model. Across agentic coding, computer use, tool use, search, and finance, Opus 4.6 is an industry-leading model, often by wide margin.",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 10,
+    "title": "Apr 14, 2026 Announcements Anthropic’s Long-Term Benefit Trust appoints Vas Narasimhan to Board of Directors",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 12,
+    "title": "Mar 31, 2026 Announcements Australian government and Anthropic sign MOU for AI safety and research",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 14,
+    "title": "Mar 11, 2026 Announcements Introducing The Anthropic Institute",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 15,
+    "title": "Mar 10, 2026 Announcements Sydney will become Anthropic’s fourth office in Asia-Pacific",
+    "source_name": "Anthropic News",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:53.926558+00:00",
+    "summary": ""
+  },
+  {
+    "id": 16,
+    "title": "How Alta Daily Uses Meta’s Segment Anything to Reimagine the Digital Closet",
+    "source_name": "Meta AI Blog",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:54.872316+00:00",
+    "summary": ""
+  },
+  {
+    "id": 18,
+    "title": "Explore Meta AI",
+    "source_name": "Meta AI Blog",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:54.872316+00:00",
+    "summary": ""
+  },
+  {
+    "id": 17,
+    "title": "Four MTIA Chips in Two Years: Scaling AI Experiences for Billions",
+    "source_name": "Meta AI Blog",
+    "source_priority": 10,
+    "published_at": "2026-04-15T15:30:54.872316+00:00",
+    "summary": ""
+  },
+  {
+    "id": 47,
+    "title": "Traza raises $2.1 million led by Base10 to automate procurement workflows with AI",
+    "source_name": "VentureBeat AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:55:00+00:00",
+    "summary": "For decades, procurement has been the back office that enterprise software forgot. Billions of dollars flow through vendor negotiations, purchase orders, and supplier communications every year at the largest manufacturers and construction companies in the country — and the vast majority of that work still runs on email threads, spreadsheets, and phone calls. Traza , a newly launched startup headqu"
+  },
+  {
+    "id": 61,
+    "title": "Anthropic, Cursor Backer Accel Raises $5 Billion for Big AI Bets",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:58:55+00:00",
+    "summary": "Accel, the venture capital firm that’s backed artificial intelligence companies including Anthropic, Cursor and Perplexity, has raised $5 billion in new funds to keep up its big bets in the age of increasingly valuable artificial intelligence startups."
+  },
+  {
+    "id": 42,
+    "title": "Anthropic’s rise is giving some OpenAI investors second thoughts",
+    "source_name": "TechCrunch AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T02:31:04+00:00",
+    "summary": "One investor who has backed both companies told the FT that justifying OpenAI's recent round required assuming an IPO valuation of $1.2 trillion or more — making Anthropic's current $380 billion valuation look like the relative bargain."
+  },
+  {
+    "id": 49,
+    "title": "Microsoft launches MAI-Image-2-Efficient, a cheaper and faster AI image model",
+    "source_name": "VentureBeat AI",
+    "source_priority": 9,
+    "published_at": "2026-04-14T16:00:00+00:00",
+    "summary": "Microsoft today launched MAI-Image-2-Efficient , a lower-cost, higher-speed variant of its flagship text-to-image model that the company says delivers production-ready quality at nearly half the price. The release, available immediately in Microsoft Foundry and MAI Playground with no waitlist, marks the fastest turnaround yet from Microsoft&#x27;s in-house AI superintelligence team — and the clear"
+  },
+  {
+    "id": 59,
+    "title": "Anthropic Attracts Investor Offers at an $800 Billion Valuation",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-14T23:48:52+00:00",
+    "summary": "Anthropic PBC has received several offers from investors for a new round of funding that could value the artificial intelligence startup at about $800 billion or higher &mdash; overtures that the Claude maker has so far resisted, according to people familiar with the matter."
+  },
+  {
+    "id": 48,
+    "title": "Anthropic’s Claude Managed Agents gives enterprises a new one-stop shop but raises vendor 'lock-in' risk",
+    "source_name": "VentureBeat AI",
+    "source_priority": 9,
+    "published_at": "2026-04-14T16:57:09+00:00",
+    "summary": "Anthropic announced a new platform last week, Claude Managed Agents , aiming to cut out the more complex parts of AI agent deployment for enterprises and competes with existing orchestration frameworks. Claude Managed Agents is also an architectural shift: enterprises, already burdened with orchestrating an increasing number of agents, can now choose to embed the orchestration logic in the AI mode"
+  },
+  {
+    "id": 70,
+    "title": "Startup Founder Faces Decade in Jail After $300 Million Meltdown",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T10:08:32+00:00",
+    "summary": "Indonesian prosecutors demanded a 10-year prison sentence for the founder of eFishery, who admitted to inflating revenues after his company racked up some $300 million of investor losses to become one of Southeast Asia’s biggest startup failures."
+  },
+  {
+    "id": 53,
+    "title": "Andreessen, Horowitz Boost AI Super PAC Cash to Over $50 Million",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T14:54:06+00:00",
+    "summary": "Venture capitalists Marc Andreessen and Ben Horowitz poured $25 million into a pro-artificial intelligence super political action committee, boosting the industry’s war chest ahead of the November midterm elections."
+  },
+  {
+    "id": 46,
+    "title": "Adobe’s new Firefly AI Assistant wants to run Photoshop, Premiere, Illustrator and more from one prompt",
+    "source_name": "VentureBeat AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:00:00+00:00",
+    "summary": "Adobe today launched its most ambitious AI offensive to date, unveiling the Firefly AI Assistant — a new agentic creative tool that can orchestrate complex, multi-step workflows across the company&#x27;s entire Creative Cloud suite from a single conversational interface — alongside a raft of new video, image, and collaboration features designed to position the company at the center of the rapidly "
+  },
+  {
+    "id": 51,
+    "title": "43% of AI-generated code changes need debugging in production, survey finds",
+    "source_name": "VentureBeat AI",
+    "source_priority": 9,
+    "published_at": "2026-04-14T13:00:00+00:00",
+    "summary": "The software industry is racing to write code with artificial intelligence. It is struggling, badly, to make sure that code holds up once it ships. A survey of 200 senior site-reliability and DevOps leaders at large enterprises across the United States, United Kingdom, and European Union paints a stark picture of the hidden costs embedded in the AI coding boom. According to Lightrun&#x27;s 2026 St"
+  },
+  {
+    "id": 40,
+    "title": "Gitar, a startup that uses agents to secure code, emerges from stealth with $9 million",
+    "source_name": "TechCrunch AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:00:00+00:00",
+    "summary": "The company uses AI to review code that, more often than not these days, has also been generated by AI."
+  },
+  {
+    "id": 41,
+    "title": "This startup is betting tokenmaxxing will create the next compute giant",
+    "source_name": "TechCrunch AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:00:00+00:00",
+    "summary": "Parasail raised $32 million in a Series A, signaling a fractured future of models and compute."
+  },
+  {
+    "id": 50,
+    "title": "Databricks tested a stronger model against its multi-step agent on hybrid queries. The stronger model still lost by 21%.",
+    "source_name": "VentureBeat AI",
+    "source_priority": 9,
+    "published_at": "2026-04-14T15:00:00+00:00",
+    "summary": "Data teams building AI agents keep running into the same failure mode. Questions that require joining structured data with unstructured content, sales figures alongside customer reviews or citation counts alongside academic papers, break single-turn RAG systems. New research from Databricks puts a number on that failure gap. The company&#x27;s AI research team tested a multi-step agentic approach "
+  },
+  {
+    "id": 52,
+    "title": "Allbirds Soars 461% After Sneaker Firm Rebrands as AI Stock",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:48:14+00:00",
+    "summary": "Allbirds Inc., the once-buzzy maker of wool sneakers valued at more than $4 billion in its heyday, announced a new business plan just days before it planned to close down for good: AI computing infrastructure."
+  },
+  {
+    "id": 54,
+    "title": "HPE Fights Tycoon Mike Lynch’s Widow Over His Estate’s Administrators",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T14:26:56+00:00",
+    "summary": "Hewlett Packard Enterprise Co. asked a UK court to name administrators over the estate of British tech entrepreneur Mike Lynch, who died after his luxury yacht sank off the coast of Sicily in 2024, as the technology firm seeks to recoup about $1.2 billion."
+  },
+  {
+    "id": 55,
+    "title": "CATL Earmarks $4.4 Billion for Critical Minerals Security",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:36:35+00:00",
+    "summary": "The world’s biggest electric-vehicle battery-maker, Contemporary Amperex Technology Co. Ltd., is planning to expand its footprint in critical minerals and strengthen supply-chain security."
+  },
+  {
+    "id": 60,
+    "title": "Big Tech Squares Off Over TV Sets That Look Like Framed Art",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:00:08+00:00",
+    "summary": "Amazon wants to capitalize on a category that Samsung pioneered. It’s also releasing a new $35 streaming stick."
+  },
+  {
+    "id": 64,
+    "title": "Microsoft Takes Over Stargate Norway Data Center From OpenAI",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-14T16:39:52+00:00",
+    "summary": "Microsoft Corp. has agreed to rent data center capacity at a site in Norway that was initially intended for OpenAI and marketed as part of the artificial intelligence company’s Stargate initiative."
+  },
+  {
+    "id": 66,
+    "title": "Jane Street Invests $1 Billion in CoreWeave, Boosts Spending Plans",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:00:09+00:00",
+    "summary": "Jane Street Group, a trading firm, has taken an additional $1 billion stake in AI cloud services provider CoreWeave Inc. and plans to spend about $6 billion on the company’s technology offerings."
+  },
+  {
+    "id": 67,
+    "title": "Solaria Eyes Stake in €4 Billion Telefónica, ACS Data Center JV",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T11:23:10+00:00",
+    "summary": "Solaria Energía y Medio Ambiente SA is in talks to join a state-backed consortium seeking to develop a €4 billion ($4.7 billion) data center hub in Spain, part of broader European efforts to expand digital infrastructure, according to people familiar with the matter."
+  },
+  {
+    "id": 68,
+    "title": "Quince’s Best-Kept Secret Isn’t Its Cheap Cashmere and Couches",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T11:00:09+00:00",
+    "summary": "The online apparel retailer has become a $10 billion-plus e-commerce giant by mastering the art of the supply chain."
+  },
+  {
+    "id": 69,
+    "title": "Thoma Bravo Signs Multiyear Deal With Google for AI Adoption",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T10:30:00+00:00",
+    "summary": "Software investor Thoma Bravo struck a strategic partnership with Alphabet Inc.’s Google Cloud to help the private equity firm’s portfolio companies accelerate their adoption of artificial intelligence."
+  },
+  {
+    "id": 73,
+    "title": "Clients Focused on AI Opportunity, Rockefeller CEO Says",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T09:19:27+00:00",
+    "summary": "Greg Fleming, president and CEO at Rockefeller Capital Management, says that his clients remain focused on the market opportunity in artificial intelligence, even as uncertainty around the Iran war and energy market fallout persists. He speaks on Bloomberg Television. (Source: Bloomberg)"
+  },
+  {
+    "id": 33,
+    "title": "New Adobe Premiere Color Grading Mode Accelerated on NVIDIA GPUs",
+    "source_name": "NVIDIA AI Blog",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:00:38+00:00",
+    "summary": "The NAB Show 2026 trade show, running April 18-22 in Las Vegas, is set to showcase a wave of new features and optimizations for top video editing applications. Bringing together over 60,000 content professionals from across the broadcast and media and entertainment industries, the event highlights how video editors, livestreamers and professional creators are exploring [&#8230;]"
+  },
+  {
+    "id": 43,
+    "title": "Anthropic co-founder confirms the company briefed the Trump administration on Mythos",
+    "source_name": "TechCrunch AI",
+    "source_priority": 9,
+    "published_at": "2026-04-14T18:09:12+00:00",
+    "summary": "In an interview at the Semafor World Economy summit this week, Anthropic co-founder Jack Clark explained why the company was still engaged with the U.S. government while simultaneously suing them."
+  },
+  {
+    "id": 44,
+    "title": "Snap is laying off 16 percent of its staff as it leans into AI",
+    "source_name": "The Verge AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T11:26:08+00:00",
+    "summary": "Snap is laying off roughly 16 percent of its global workforce in a cost-cutting effort to chase improved profitability with the help of AI. The cuts will impact around 1,000 full-time employees, according to a memo sent to staffers from Snap CEO Evan Spiegel. An additional 300 open roles are also being closed. \"While these [&#8230;]"
+  },
+  {
+    "id": 45,
+    "title": "Coming soon: 10 Things That Matter in AI Right Now",
+    "source_name": "MIT Technology Review",
+    "source_priority": 9,
+    "published_at": "2026-04-14T11:00:00+00:00",
+    "summary": "Each year we compile our 10 Breakthrough Technologies list, featuring our educated predictions for which technologies will have the biggest impact on how we live and work. This year, however, we had a dilemma. While our final picks encompass all our core coverage areas (energy, AI, and biotech, plus a few more), our 2026 list&#8230;"
+  },
+  {
+    "id": 32,
+    "title": "Rethinking AI TCO: Why Cost per Token Is the Only Metric That Matters",
+    "source_name": "NVIDIA AI Blog",
+    "source_priority": 9,
+    "published_at": "2026-04-15T15:00:26+00:00",
+    "summary": "Traditional data centers only stored, retrieved and processed data. In the generative and agentic AI era, these facilities have evolved into AI token factories. With AI inference becoming their primary workload, their primary output is intelligence manufactured in the form of tokens. This transformation demands a corresponding shift in how the economics of AI infrastructure, [&#8230;]"
+  },
+  {
+    "id": 39,
+    "title": "After sale of its shoe business, Allbirds pivots to AI",
+    "source_name": "TechCrunch AI",
+    "source_priority": 9,
+    "published_at": "2026-04-15T14:24:31+00:00",
+    "summary": "Allbirds is ditching wool sneakers for AI servers, rebranding as NewBird AI after locking in a $50M convertible financing facility."
+  },
+  {
+    "id": 56,
+    "title": "Snap to Cut 16% of Its Workforce in Quest for Profitability",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T10:05:00+00:00",
+    "summary": "Snap Inc. is laying off roughly 1,000 full-time employees, or 16% of its global workforce, as part of an effort by Chief Executive Officer Evan Spiegel to reduce costs and achieve profitability."
+  },
+  {
+    "id": 58,
+    "title": "Musk Row Shows Gap With Ramaphosa in South Africa Equity Rules",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:05:09+00:00",
+    "summary": "President Cyril Ramaphosa said billionaire Elon Musk could use equity-equivalence programs to meet South Africa’s racial-equity rules and roll out his Starlink internet service locally, pointing to US firms that comply through alternative investments rather than ownership."
+  },
+  {
+    "id": 72,
+    "title": "Tesla’s Chinese Robot Rival Ramps Pre-IPO Global Push",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T08:38:50+00:00",
+    "summary": "Unitree Robotics began selling its cheapest humanoid robot on Alibaba Group Holding Ltd.’s AliExpress on Wednesday, expanding its international presence in a white-hot race featuring heavyweight players like Elon Musk’s Tesla Inc."
+  },
+  {
+    "id": 19,
+    "title": "Speaking of Voxtral Research Voxtral TTS: A frontier, open-weights text-to-speech model that’s fast, instantly adaptable, and produces lifelike speech for voice agents. Mar 23, 2026 Mistral AI",
+    "source_name": "Mistral AI News",
+    "source_priority": 9,
+    "published_at": "2026-04-15T15:30:53.937778+00:00",
+    "summary": ""
+  },
+  {
+    "id": 57,
+    "title": "Meta Threatened With EU Restriction Over WhatsApp AI Concern",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T13:01:36+00:00",
+    "summary": "Meta Platforms Inc. has been threatened with an interim European Union ban on policies that allegedly block rival AI firms from operating on WhatsApp, unless the tech giant offers fixes that appease the bloc’s concerns."
+  },
+  {
+    "id": 71,
+    "title": "EU Unveils Age Verification App as Social Media Bans Gain Steam",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T10:00:41+00:00",
+    "summary": "The European Union has unveiled an app to confirm users’ age online, setting the standard for verification technology as more countries consider laws banning young teenagers from social media."
+  },
+  {
+    "id": 62,
+    "title": "Aixtron Surges to 25-Year High as AI Spurs Demand for Its Tools",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:34:19+00:00",
+    "summary": "Niche chip equipment maker Aixtron SE is cementing its place as the new artificial intelligence darling of Europe’s stock market."
+  },
+  {
+    "id": 63,
+    "title": "South Korea Overtook China as ASML’s Largest Market Last Quarter",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:15:26+00:00",
+    "summary": "South Korea emerged as ASML Holding NV’s largest market in the first quarter as the country’s memory chip makers increase purchases to address chronic shortages stemming from the artificial intelligence boom."
+  },
+  {
+    "id": 65,
+    "title": "AI-Exposed Lenders Show Early Credit Warning Signs, Moody’s Says",
+    "source_name": "Bloomberg Technology",
+    "source_priority": 9,
+    "published_at": "2026-04-15T12:02:20+00:00",
+    "summary": "Artificial intelligence is becoming a bigger fault line in credit markets, according to a Moody’s Analytics report that points to emerging signs of broader strain among exposed lenders."
+  },
+  {
+    "id": 393,
+    "title": "Anthropic prepares Opus 4.7 and AI design tool, VCs offer up to 800 billion dollars",
+    "source_name": "The Decoder",
+    "source_priority": 8,
+    "published_at": "2026-04-15T14:26:04+00:00",
+    "summary": "Anthropic is preparing to release a new model and a design tool that would compete with Adobe and Figma. Meanwhile, venture capitalists are lining up to invest at sky-high valuations. The article Anthropic prepares Opus 4.7 and AI design tool, VCs offer up to 800 billion dollars appeared first on The Decoder ."
+  },
+  {
+    "id": 413,
+    "title": "Scoop: U.S. eases bank sanctions amid Venezuela's economic woes",
+    "source_name": "Axios AI",
+    "source_priority": 8,
+    "published_at": "2026-04-14T18:49:59+00:00",
+    "summary": "The Trump administration eased sanctions on Venezuela's state-run financial system Tuesday to try to boost the country's economy amid protests by public workers demanding higher pay. Why it matters: Venezuela's government-run bank and other large financial institutions can now begin legally using U.S. currency, directly receive billions of dollars in oil sales and reenter the U.S.-controlled globa"
+  }
+]

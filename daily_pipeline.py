@@ -5,9 +5,10 @@
   python daily_pipeline.py --fetch         # 只抓新聞
   python daily_pipeline.py --score         # 只評分
   python daily_pipeline.py --brief         # 只生成 Brief
-  python daily_pipeline.py --compose       # 只合成影片（需先選題+腳本）
+  python daily_pipeline.py --tts           # 只跑配音（無樣本則靜音）
+  python daily_pipeline.py --compose       # 只合成影片
   python daily_pipeline.py --upload        # 只上傳 YouTube
-  python daily_pipeline.py --all           # 全自動（無人工選題）
+  python daily_pipeline.py --all           # 全自動
 """
 from __future__ import annotations
 
@@ -56,6 +57,20 @@ def step_brief() -> dict:
     return brief
 
 
+def step_tts(script_path: Path | None = None) -> Path | None:
+    logger.info("═══ 步驟 3b：配音生成（TTS）═══")
+    if not script_path:
+        scripts = sorted((PROJECT_ROOT / "data" / "scripts").glob("*/script.json"), reverse=True)
+        if not scripts:
+            logger.warning("找不到 script.json")
+            return None
+        script_path = scripts[0]
+    from modules.tts.xtts_engine import generate_audio
+    audio = generate_audio(script_path)
+    db_manager.set_pipeline_status("images")
+    return audio
+
+
 def step_compose(script_path: Path | None = None) -> Path | None:
     logger.info("═══ 步驟 4：影片合成 ═══")
     if not script_path:
@@ -68,10 +83,19 @@ def step_compose(script_path: Path | None = None) -> Path | None:
     from modules.video.subtitle_generator import from_script
     from modules.video.compositor import compose
     from modules.image.thumbnail_generator import generate_thumbnail
+    from modules.image.comfyui_client import generate_images
+
+    # 圖片生成（ComfyUI 或佔位圖）
+    generate_images(script_path)
+
+    # 配音路徑（若 TTS 已跑過）
+    slug = script_path.parent.name
+    audio_path = PROJECT_ROOT / "data" / "audio" / slug / "audio_full.wav"
+    audio = audio_path if audio_path.exists() else None
 
     srt = from_script(script_path)
     thumb = generate_thumbnail(script_path)
-    video = compose(script_path, subtitle_path=srt)
+    video = compose(script_path, audio_path=audio, subtitle_path=srt)
 
     logger.info(f"影片合成完成：{video}")
     return video
@@ -116,6 +140,7 @@ def main() -> None:
     ap.add_argument("--fetch", action="store_true")
     ap.add_argument("--score", action="store_true")
     ap.add_argument("--brief", action="store_true")
+    ap.add_argument("--tts", action="store_true")
     ap.add_argument("--compose", action="store_true")
     ap.add_argument("--upload", action="store_true")
     ap.add_argument("--all", action="store_true")
@@ -137,6 +162,8 @@ def main() -> None:
         step_score()
     if args.brief:
         step_brief()
+    if args.tts:
+        step_tts()
     if args.compose:
         step_compose()
     if args.upload:

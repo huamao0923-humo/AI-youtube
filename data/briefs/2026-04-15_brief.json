@@ -1,0 +1,178 @@
+{
+  "date": "2026-04-15",
+  "generated_at": "2026-04-15T16:45:19.542687+00:00",
+  "candidates": [
+    {
+      "rank": 1,
+      "id": 9,
+      "title": "Announcements Feb 5, 2026 Introducing Claude Opus 4.6 We’re upgrading our smartest model. Across agentic coding, computer use, tool use, search, and finance, Opus 4.6 is an industry-leading model, often by wide margin.",
+      "source_name": "Anthropic News",
+      "published_at": "2026-04-15T15:30:53.926558+00:00",
+      "ai_score": 9.5,
+      "business_angle": "Claude Opus 4.6 在 Agentic coding、Computer Use、金融等核心場景全面領先，代表 Anthropic 在企業 AI 實用性上已超越競爭對手。",
+      "why_audience_cares": "台灣開發者大量使用 Claude，新旗艦模型直接影響工具選擇與生產力，高度相關。",
+      "suggested_title": "Claude Opus 4.6 來了！Anthropic 這次真的贏了",
+      "angles": [
+        {
+          "label": "A",
+          "name": "商業影響角度",
+          "description": "聚焦在：Claude Opus 4.6 在 Agentic coding、Computer Use、金融等核心場景全面領先，代表 Anthropic 在企業 AI 實用"
+        },
+        {
+          "label": "B",
+          "name": "觀眾實用角度",
+          "description": "聚焦在：台灣開發者大量使用 Claude，新旗艦模型直接影響工具選擇與生產力，高度相關。"
+        },
+        {
+          "label": "C",
+          "name": "趨勢預測角度",
+          "description": "深挖「Claude Opus 4.6 來了！Anthropic 這次真的贏了」背後代表的產業趨勢走向"
+        }
+      ],
+      "url": null
+    },
+    {
+      "rank": 2,
+      "id": 393,
+      "title": "Anthropic prepares Opus 4.7 and AI design tool, VCs offer up to 800 billion dollars",
+      "source_name": "The Decoder",
+      "published_at": "2026-04-15T14:26:04+00:00",
+      "ai_score": 9.5,
+      "business_angle": "Anthropic 即將推出 Opus 4.7 並搶進設計工具市場與 Adobe、Figma 正面競爭，同時估值衝 8000 億，多個爆炸性消息同時出現。",
+      "why_audience_cares": "Anthropic 新模型即將發布是台灣 AI 社群最熱門話題，搶進設計工具更是意外的商業突破。",
+      "suggested_title": "Anthropic 要推 Opus 4.7！還要打進設計市場搶 Adobe 飯碗",
+      "angles": [
+        {
+          "label": "A",
+          "name": "商業影響角度",
+          "description": "聚焦在：Anthropic 即將推出 Opus 4.7 並搶進設計工具市場與 Adobe、Figma 正面競爭，同時估值衝 8000 億，多個爆炸性消息同時出現。"
+        },
+        {
+          "label": "B",
+          "name": "觀眾實用角度",
+          "description": "聚焦在：Anthropic 新模型即將發布是台灣 AI 社群最熱門話題，搶進設計工具更是意外的商業突破。"
+        },
+        {
+          "label": "C",
+          "name": "趨勢預測角度",
+          "description": "深挖「Anthropic 要推 Opus 4.7！還要打進設計市場搶 Adobe 飯碗」背後代表的產業趨勢走向"
+        }
+      ],
+      "url": null
+    },
+    {
+      "rank": 3,
+      "id": 11,
+      "title": "Apr 6, 2026 Announcements Anthropic expands partnership with Google and Broadcom for multiple gigawatts of next-generation compute",
+      "source_name": "Anthropic News",
+      "published_at": "2026-04-15T15:30:53.926558+00:00",
+      "ai_score": 9.0,
+      "business_angle": "Anthropic 與 Google、Broadcom 合作取得多吉瓦算力，意味著 Claude 的規模化部署不再受限，直接影響未來模型能力上限。",
+      "why_audience_cares": "這是算力軍備競賽的新篇章，台灣觀眾關心 AI 基礎設施走向，此消息預示 Claude 將大幅擴產。",
+      "suggested_title": "Anthropic 聯手 Google！搶下數吉瓦算力大單",
+      "angles": [
+        {
+          "label": "A",
+          "name": "商業影響角度",
+          "description": "聚焦在：Anthropic 與 Google、Broadcom 合作取得多吉瓦算力，意味著 Claude 的規模化部署不再受限，直接影響未來模型能力上限。"
+        },
+        {
+          "label": "B",
+          "name": "觀眾實用角度",
+          "description": "聚焦在：這是算力軍備競賽的新篇章，台灣觀眾關心 AI 基礎設施走向，此消息預示 Claude 將大幅擴產。"
+        },
+        {
+          "label": "C",
+          "name": "趨勢預測角度",
+          "description": "深挖「Anthropic 聯手 Google！搶下數吉瓦算力大單」背後代表的產業趨勢走向"
+        }
+      ],
+      "url": null
+    },
+    {
+      "rank": 4,
+      "id": 59,
+      "title": "Anthropic Attracts Investor Offers at an $800 Billion Valuation",
+      "source_name": "Bloomberg Technology",
+      "published_at": "2026-04-14T23:48:52+00:00",
+      "ai_score": 9.0,
+      "business_angle": "Anthropic 估值達 8000 億美元，已接近 1 兆美元門檻，創下 AI 新創歷史新高，反映市場對 Claude 商業前景極度樂觀。",
+      "why_audience_cares": "Anthropic 估值屢創新高是台灣 AI 圈年度熱話，8000 億的數字震撼，觀眾高度有感。",
+      "suggested_title": "Anthropic 估值衝 8000 億！AI 新創市值天花板在哪",
+      "angles": [
+        {
+          "label": "A",
+          "name": "商業影響角度",
+          "description": "聚焦在：Anthropic 估值達 8000 億美元，已接近 1 兆美元門檻，創下 AI 新創歷史新高，反映市場對 Claude 商業前景極度樂觀。"
+        },
+        {
+          "label": "B",
+          "name": "觀眾實用角度",
+          "description": "聚焦在：Anthropic 估值屢創新高是台灣 AI 圈年度熱話，8000 億的數字震撼，觀眾高度有感。"
+        },
+        {
+          "label": "C",
+          "name": "趨勢預測角度",
+          "description": "深挖「Anthropic 估值衝 8000 億！AI 新創市值天花板在哪」背後代表的產業趨勢走向"
+        }
+      ],
+      "url": null
+    },
+    {
+      "rank": 5,
+      "id": 13,
+      "title": "Mar 12, 2026 Announcements Anthropic invests $100 million into the Claude Partner Network",
+      "source_name": "Anthropic News",
+      "published_at": "2026-04-15T15:30:53.926558+00:00",
+      "ai_score": 8.5,
+      "business_angle": "Anthropic 投入 1 億美元建立合作夥伴網路，代表 Claude 正積極向企業生態系滲透，是 OpenAI 以外最具規模的 B2B AI 布局之一。",
+      "why_audience_cares": "台灣企業與開發者若想用 Claude 做商業應用，這個合作網路直接影響取得成本與支援品質。",
+      "suggested_title": "Anthropic 砸億元建生態！Claude 要搶企業市場",
+      "angles": [
+        {
+          "label": "A",
+          "name": "商業影響角度",
+          "description": "聚焦在：Anthropic 投入 1 億美元建立合作夥伴網路，代表 Claude 正積極向企業生態系滲透，是 OpenAI 以外最具規模的 B2B AI 布局之一。"
+        },
+        {
+          "label": "B",
+          "name": "觀眾實用角度",
+          "description": "聚焦在：台灣企業與開發者若想用 Claude 做商業應用，這個合作網路直接影響取得成本與支援品質。"
+        },
+        {
+          "label": "C",
+          "name": "趨勢預測角度",
+          "description": "深挖「Anthropic 砸億元建生態！Claude 要搶企業市場」背後代表的產業趨勢走向"
+        }
+      ],
+      "url": null
+    }
+  ],
+  "quick_news": [
+    {
+      "id": 15,
+      "title": "Mar 10, 2026 Announcements Sydney will become Anthropic’s fourth office in Asia-Pacific",
+      "source": "Anthropic News"
+    },
+    {
+      "id": 33,
+      "title": "New Adobe Premiere Color Grading Mode Accelerated on NVIDIA GPUs",
+      "source": "NVIDIA AI Blog"
+    },
+    {
+      "id": 73,
+      "title": "Clients Focused on AI Opportunity, Rockefeller CEO Says",
+      "source": "Bloomberg Technology"
+    },
+    {
+      "id": 16,
+      "title": "How Alta Daily Uses Meta’s Segment Anything to Reimagine the Digital Closet",
+      "source": "Meta AI Blog"
+    },
+    {
+      "id": 47,
+      "title": "Traza raises $2.1 million led by Base10 to automate procurement workflows with AI",
+      "source": "VentureBeat AI"
+    }
+  ]
+}
