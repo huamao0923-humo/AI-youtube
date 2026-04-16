@@ -47,11 +47,30 @@ def _fail(stage: str, msg: str, date: str) -> None:
 
 
 def handle_selected(status: dict) -> None:
-    """已選題 → 更新進度顯示，等待使用者觸發腳本生成（CoWork 模式）。"""
-    logger.info("偵測到選題完成 → 進入 scripting 等待階段")
-    logger.info("請執行：python -m modules.script.researcher --news-id <id> --cowork")
-    logger.info("腳本生成後前往 Web UI /script 審閱並確認")
-    db_manager.set_pipeline_status("scripting", date=status.get("date"))
+    """已選題 → 生成研究 prompt，進入 researching（CoWork 等待）。"""
+    news_id = status.get("selected_id")
+    date    = status.get("date")
+    if not news_id:
+        logger.warning("selected 狀態缺少 selected_id，跳過")
+        return
+    try:
+        from modules.script.researcher import export_prompt
+        prompt, out_dir = export_prompt(news_id)
+        logger.info(f"研究 prompt 已生成：{out_dir}/research_prompt.md")
+        logger.info("→ 請前往 Web UI /cowork/research 複製 prompt 給 Claude Code")
+        db_manager.set_pipeline_status("researching", date=date, error_msg=None)
+    except Exception as e:
+        _fail("selected", str(e), date or "")
+
+
+def handle_researching(status: dict, date: str) -> None:
+    """研究中（CoWork 等待）— watcher 不做任何事，等使用者在 Web UI 匯入研究結果。"""
+    logger.debug("researching 階段等待 CoWork 輸入…（watcher 不介入）")
+
+
+def handle_scripting(status: dict, date: str) -> None:
+    """腳本生成中（CoWork 等待）— watcher 不做任何事，等使用者在 Web UI 匯入腳本 JSON。"""
+    logger.debug("scripting 階段等待 CoWork 輸入…（watcher 不介入）")
 
 
 def handle_tts(status: dict, date: str) -> None:
@@ -138,6 +157,8 @@ def handle_uploading(status: dict, date: str) -> None:
 
 HANDLERS = {
     "selected":    handle_selected,
+    "researching": handle_researching,
+    "scripting":   handle_scripting,
     "tts":         handle_tts,
     "images":      handle_images,
     "compositing": handle_compositing,
@@ -177,7 +198,7 @@ def tick() -> None:
 
     _retry_count[key] = retries + 1
     try:
-        if stage == "selected":
+        if stage in ("selected",):
             HANDLERS[stage](status)
         else:
             HANDLERS[stage](status, date)

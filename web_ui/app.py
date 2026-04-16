@@ -148,6 +148,96 @@ def setup_page():
                            active="setup")
 
 
+# ─────────── CoWork 研究 / 腳本 ───────────
+
+@app.route("/cowork/research")
+@login_required
+def cowork_research():
+    """顯示研究 Prompt，讓使用者複製給 Claude Code。"""
+    prompt = None
+    # 找最新的 research_prompt.md
+    prompts = sorted(
+        (PROJECT_ROOT / "data" / "scripts").glob("*/research_prompt.md"), reverse=True
+    )
+    if prompts:
+        prompt = prompts[0].read_text(encoding="utf-8")
+    return render_template("cowork_research.html",
+                           prompt=prompt,
+                           stats=_stats(),
+                           active="status")
+
+
+@app.route("/api/cowork/research", methods=["POST"])
+@login_required
+def api_cowork_research():
+    """接收研究結果，存成 research.json，生成腳本 Prompt，推進 pipeline。"""
+    data = request.get_json(silent=True) or {}
+    research_text = (data.get("research_text") or "").strip()
+    if not research_text:
+        return jsonify({"error": "research_text 不能為空"}), 400
+
+    status = db_manager.get_pipeline_status()
+    news_id = status.get("selected_id")
+    if not news_id:
+        return jsonify({"error": "找不到已選題的 news_id，請先選題"}), 400
+
+    try:
+        from modules.script.researcher import save_research
+        from modules.script.script_writer import export_prompt
+        research_path = save_research(news_id, research_text)
+        export_prompt(research_path)  # 同時生成 script_prompt.md
+        db_manager.set_pipeline_status("scripting",
+                                       date=status.get("date"), error_msg=None)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 500
+
+
+@app.route("/cowork/script")
+@login_required
+def cowork_script():
+    """顯示腳本生成 Prompt，讓使用者複製給 Claude Code。"""
+    prompt = None
+    prompts = sorted(
+        (PROJECT_ROOT / "data" / "scripts").glob("*/script_prompt.md"), reverse=True
+    )
+    if prompts:
+        prompt = prompts[0].read_text(encoding="utf-8")
+    return render_template("cowork_script.html",
+                           prompt=prompt,
+                           stats=_stats(),
+                           active="status")
+
+
+@app.route("/api/cowork/script", methods=["POST"])
+@login_required
+def api_cowork_script():
+    """接收腳本 JSON，存檔並推進 pipeline 到 script_ready。"""
+    data = request.get_json(silent=True) or {}
+    script_json = (data.get("script_json") or "").strip()
+    if not script_json:
+        return jsonify({"error": "script_json 不能為空"}), 400
+
+    status  = db_manager.get_pipeline_status()
+    news_id = status.get("selected_id")
+
+    try:
+        from modules.script.script_writer import save_script
+        # 找最新的研究資料夾
+        research_files = sorted(
+            (PROJECT_ROOT / "data" / "scripts").glob("*/research.json"), reverse=True
+        )
+        if not research_files:
+            return jsonify({"error": "找不到 research.json，請先完成研究步驟"}), 400
+        out_dir = research_files[0].parent
+        save_script(script_json, out_dir, news_id)
+        db_manager.set_pipeline_status("script_ready",
+                                       date=status.get("date"), error_msg=None)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 500
+
+
 # ─────────── 評分 Web 入口 ───────────
 
 @app.route("/scoring")

@@ -76,7 +76,11 @@
         <div class="pipe-body">
           <div class="pipe-name">{{ name }}</div>
           <div class="pipe-desc">{{ desc }}</div>
-          {% if key == 'script_ready' %}
+          {% if key == 'researching' %}
+          <a href="/cowork/research" class="btn btn-primary btn-sm" style="margin-top:10px">🤖 前往 CoWork 研究 →</a>
+          {% elif key == 'scripting' %}
+          <a href="/cowork/script" class="btn btn-primary btn-sm" style="margin-top:10px">🤖 前往 CoWork 腳本 →</a>
+          {% elif key == 'script_ready' %}
           <a href="/script" class="btn btn-primary btn-sm" style="margin-top:10px">前往審閱腳本 →</a>
           {% endif %}
         </div>

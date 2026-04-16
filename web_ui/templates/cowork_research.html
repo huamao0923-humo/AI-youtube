@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}CoWork — 深度研究{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>CoWork 深度研究</h1>
+    <span class="sub">步驟 1／2 — 複製 Prompt → 貼給 Claude Code → 匯入結果</span>
+  </div>
+  <div class="topbar-actions">
+    <a href="/status" class="btn btn-ghost">← 製作進度</a>
+  </div>
+</div>
+
+<div class="content">
+
+  {% if not prompt %}
+  <div class="empty">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">尚無研究 Prompt</div>
+    <div class="empty-desc">請先在「今日選題」頁選定主題，系統會自動生成研究 Prompt。</div>
+  </div>
+  {% else %}
+
+  <div class="banner banner-info">
+    <strong>CoWork 流程：</strong>
+    按「複製 Prompt」→ 在 Claude Code 貼上並送出 → 複製回應 → 貼到下方「匯入研究結果」→ 送出
+  </div>
+
+  <!-- Step 1：複製 Prompt -->
+  <div class="card" style="padding:20px 24px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="section-label" style="margin-bottom:0">步驟一：複製研究 Prompt</div>
+      <button class="btn btn-primary" onclick="copyPrompt()">📋 複製 Prompt</button>
+    </div>
+    <pre id="prompt-box"
+      style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:12px;color:var(--text2);font-family:monospace;white-space:pre-wrap;max-height:320px;overflow-y:auto;line-height:1.6">{{ prompt }}</pre>
+    <div id="copy-msg" style="margin-top:8px;font-size:12px;color:var(--green);display:none">✅ 已複製到剪貼簿</div>
+  </div>
+
+  <!-- Step 2：貼入研究結果 -->
+  <div class="card" style="padding:20px 24px">
+    <div class="section-label" style="margin-bottom:12px">步驟二：匯入 Claude Code 的研究結果</div>
+    <textarea id="research-text"
+      style="width:100%;height:280px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--text);font-family:inherit;resize:vertical;line-height:1.6"
+      placeholder="將 Claude Code 回傳的研究摘要貼在這裡（純文字，不需要 JSON 格式）…"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+      <button class="btn btn-success" onclick="submitResearch()">✅ 匯入研究結果，繼續生成腳本 Prompt</button>
+      <div id="submit-result" style="font-size:13px"></div>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyPrompt() {
+  const text = document.getElementById('prompt-box').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const msg = document.getElementById('copy-msg');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 3000);
+  });
+}
+
+async function submitResearch() {
+  const text = document.getElementById('research-text').value.trim();
+  if (!text) {
+    document.getElementById('submit-result').innerHTML = '<span style="color:var(--red)">請先貼入研究內容</span>';
+    return;
+  }
+  const btn = document.querySelector('button[onclick="submitResearch()"]');
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+  const resp = await fetch('/api/cowork/research', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({research_text: text}),
+  });
+  const data = await resp.json();
+  if (data.ok) {
+    document.getElementById('submit-result').innerHTML =
+      '<span style="color:var(--green)">✅ 研究已儲存！正在跳轉到腳本 Prompt 頁…</span>';
+    setTimeout(() => location.href = '/cowork/script', 1500);
+  } else {
+    btn.disabled = false;
+    btn.textContent = '✅ 匯入研究結果，繼續生成腳本 Prompt';
+    document.getElementById('submit-result').innerHTML =
+      '<span style="color:var(--red)">失敗：' + (data.error || '') + '</span>';
+  }
+}
+</script>
+{% endblock %}

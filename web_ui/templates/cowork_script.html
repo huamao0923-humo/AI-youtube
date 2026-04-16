@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}CoWork — 腳本生成{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>CoWork 腳本生成</h1>
+    <span class="sub">步驟 2／2 — 複製 Prompt → 貼給 Claude Code → 匯入 JSON</span>
+  </div>
+  <div class="topbar-actions">
+    <a href="/cowork/research" class="btn btn-ghost">← 回到研究步驟</a>
+    <a href="/status" class="btn btn-ghost">製作進度</a>
+  </div>
+</div>
+
+<div class="content">
+
+  {% if not prompt %}
+  <div class="empty">
+    <div class="empty-icon">✍️</div>
+    <div class="empty-title">尚無腳本 Prompt</div>
+    <div class="empty-desc">請先完成「深度研究」步驟，系統會自動生成腳本 Prompt。<br>
+    <a href="/cowork/research" class="btn btn-primary" style="margin-top:12px;display:inline-block">前往深度研究 →</a></div>
+  </div>
+  {% else %}
+
+  <div class="banner banner-info">
+    <strong>CoWork 流程：</strong>
+    按「複製 Prompt」→ 在 Claude Code 貼上並送出 → 複製回傳的 JSON → 貼到下方「匯入腳本 JSON」→ 送出
+  </div>
+
+  <!-- Step 1：複製 Prompt -->
+  <div class="card" style="padding:20px 24px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="section-label" style="margin-bottom:0">步驟一：複製腳本生成 Prompt</div>
+      <button class="btn btn-primary" onclick="copyPrompt()">📋 複製 Prompt</button>
+    </div>
+    <pre id="prompt-box"
+      style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:12px;color:var(--text2);font-family:monospace;white-space:pre-wrap;max-height:320px;overflow-y:auto;line-height:1.6">{{ prompt }}</pre>
+    <div id="copy-msg" style="margin-top:8px;font-size:12px;color:var(--green);display:none">✅ 已複製到剪貼簿</div>
+  </div>
+
+  <!-- Step 2：貼入 JSON -->
+  <div class="card" style="padding:20px 24px">
+    <div class="section-label" style="margin-bottom:4px">步驟二：匯入 Claude Code 的腳本 JSON</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+      Claude Code 應回傳一個完整的 JSON 物件（以 <code>{"{"}</code> 開頭）
+    </div>
+    <textarea id="script-json"
+      style="width:100%;height:300px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text);font-family:monospace;resize:vertical;line-height:1.5"
+      placeholder='{"title_options": [...], "script_sections": [...], ...}'></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+      <button class="btn btn-success" onclick="submitScript()">✅ 匯入腳本，前往審閱</button>
+      <div id="submit-result" style="font-size:13px"></div>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyPrompt() {
+  const text = document.getElementById('prompt-box').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const msg = document.getElementById('copy-msg');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 3000);
+  });
+}
+
+async function submitScript() {
+  const raw = document.getElementById('script-json').value.trim();
+  if (!raw) {
+    document.getElementById('submit-result').innerHTML = '<span style="color:var(--red)">請先貼入腳本 JSON</span>';
+    return;
+  }
+
+  // 前端先驗證 JSON 格式
+  try { JSON.parse(raw); } catch(e) {
+    document.getElementById('submit-result').innerHTML =
+      '<span style="color:var(--red)">JSON 格式錯誤：' + e.message + '</span>';
+    return;
+  }
+
+  const btn = document.querySelector('button[onclick="submitScript()"]');
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+
+  const resp = await fetch('/api/cowork/script', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({script_json: raw}),
+  });
+  const data = await resp.json();
+  if (data.ok) {
+    document.getElementById('submit-result').innerHTML =
+      '<span style="color:var(--green)">✅ 腳本已儲存！正在跳轉到審閱頁…</span>';
+    setTimeout(() => location.href = '/script', 1500);
+  } else {
+    btn.disabled = false;
+    btn.textContent = '✅ 匯入腳本，前往審閱';
+    document.getElementById('submit-result').innerHTML =
+      '<span style="color:var(--red)">失敗：' + (data.error || '') + '</span>';
+  }
+}
+</script>
+{% endblock %}
