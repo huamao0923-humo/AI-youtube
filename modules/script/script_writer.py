@@ -157,6 +157,38 @@ def _extract_json(text: str) -> dict:
     return json.loads(text)
 
 
+def auto_write_script(research_path: Path) -> Path:
+    """
+    用 claude CLI（-p 模式）自動生成腳本 JSON，不需要 API Key。
+    使用 Claude Max 訂閱，等同於 CoWork。
+    回傳 script.json 路徑。
+    """
+    import subprocess
+    prompt, _ = export_prompt(research_path)
+
+    # 強化提示，確保只輸出 JSON
+    cli_prompt = prompt + "\n\n重要：只輸出 JSON 本身，不要任何說明文字、markdown 或 code block。"
+
+    logger.info("呼叫 claude CLI 生成腳本 JSON…")
+    result = subprocess.run(
+        ["claude", "-p", cli_prompt],
+        capture_output=True, text=True, encoding="utf-8", timeout=600
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"claude CLI 失敗（code={result.returncode}）：{result.stderr[:300]}"
+        )
+    raw = result.stdout.strip()
+    if not raw:
+        raise RuntimeError("claude CLI 回傳空白內容")
+
+    research_data = json.loads(research_path.read_text(encoding="utf-8"))
+    news_id = research_data.get("news_id")
+    out_path = save_script(raw, research_path.parent, news_id)
+    logger.info(f"腳本生成完成：{out_path}")
+    return out_path
+
+
 def run(research_path: Path | None = None, news_id: int | None = None) -> Path:
     """主入口：生成腳本 prompt 並等待 CoWork 輸入。"""
     if research_path is None and news_id is not None:

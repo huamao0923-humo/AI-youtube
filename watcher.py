@@ -47,30 +47,69 @@ def _fail(stage: str, msg: str, date: str) -> None:
 
 
 def handle_selected(status: dict) -> None:
-    """已選題 → 生成研究 prompt，進入 researching（CoWork 等待）。"""
+    """
+    已選題 → 自動執行：深度研究 + 腳本生成（claude CLI）。
+    若 claude CLI 不可用或失敗，退回 CoWork 模式讓使用者手動操作。
+    """
     news_id = status.get("selected_id")
     date    = status.get("date")
     if not news_id:
         logger.warning("selected 狀態缺少 selected_id，跳過")
         return
+
+    # ── 嘗試全自動模式（claude CLI）──
+    try:
+        from modules.script.researcher import auto_research
+        from modules.script.script_writer import auto_write_script
+
+        logger.info("▶ 自動模式：呼叫 claude CLI 進行深度研究…")
+        db_manager.set_pipeline_status("researching", date=date, error_msg=None)
+        research_path = auto_research(news_id)
+
+        logger.info("▶ 自動模式：呼叫 claude CLI 生成腳本 JSON…")
+        db_manager.set_pipeline_status("scripting", date=date, error_msg=None)
+        auto_write_script(research_path)
+
+        logger.info("✅ 自動研究 + 腳本生成完成，進入腳本審閱")
+        db_manager.set_pipeline_status("script_ready", date=date, error_msg=None)
+        return
+
+    except FileNotFoundError:
+        # claude CLI 未安裝 → 退回 CoWork
+        logger.warning("claude CLI 未找到，退回 CoWork 手動模式")
+    except Exception as e:
+        logger.warning(f"自動模式失敗（{e}），退回 CoWork 手動模式")
+
+    # ── Fallback：CoWork 手動模式 ──
     try:
         from modules.script.researcher import export_prompt
-        prompt, out_dir = export_prompt(news_id)
-        logger.info(f"研究 prompt 已生成：{out_dir}/research_prompt.md")
-        logger.info("→ 請前往 Web UI /cowork/research 複製 prompt 給 Claude Code")
-        db_manager.set_pipeline_status("researching", date=date, error_msg=None)
-    except Exception as e:
-        _fail("selected", str(e), date or "")
+        export_prompt(news_id)
+        logger.info("研究 Prompt 已生成 → 請前往 Web UI /cowork/research")
+        db_manager.set_pipeline_status("researching", date=date,
+                                       error_msg="自動模式失敗，請至 CoWork 頁面手動操作")
+    except Exception as e2:
+        _fail("selected", str(e2), date or "")
 
 
 def handle_researching(status: dict, date: str) -> None:
-    """研究中（CoWork 等待）— watcher 不做任何事，等使用者在 Web UI 匯入研究結果。"""
-    logger.debug("researching 階段等待 CoWork 輸入…（watcher 不介入）")
+    """
+    研究中 — 若有 error_msg 表示自動模式已失敗，等使用者在 Web UI CoWork 頁面操作。
+    若無 error_msg 表示仍在自動執行中，watcher 不介入。
+    """
+    if status.get("error_msg"):
+        logger.debug("researching：等待 CoWork 手動輸入…")
+    else:
+        logger.debug("researching：自動執行中，watcher 不介入")
 
 
 def handle_scripting(status: dict, date: str) -> None:
-    """腳本生成中（CoWork 等待）— watcher 不做任何事，等使用者在 Web UI 匯入腳本 JSON。"""
-    logger.debug("scripting 階段等待 CoWork 輸入…（watcher 不介入）")
+    """
+    腳本生成中 — 同 handle_researching 邏輯。
+    """
+    if status.get("error_msg"):
+        logger.debug("scripting：等待 CoWork 手動輸入…")
+    else:
+        logger.debug("scripting：自動執行中，watcher 不介入")
 
 
 def handle_tts(status: dict, date: str) -> None:
