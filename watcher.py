@@ -57,38 +57,41 @@ def handle_selected(status: dict) -> None:
         logger.warning("selected 狀態缺少 selected_id，跳過")
         return
 
-    # ── 嘗試全自動模式（claude CLI）──
-    try:
-        from modules.script.researcher import auto_research
-        from modules.script.script_writer import auto_write_script
+    from modules.script.researcher import auto_research, export_prompt
+    from modules.script.script_writer import auto_write_script
 
+    # ── 步驟 1：深度研究 ──
+    research_path = None
+    try:
         logger.info("▶ 自動模式：呼叫 claude CLI 進行深度研究…")
         db_manager.set_pipeline_status("researching", date=date, error_msg=None)
         research_path = auto_research(news_id)
+        logger.info("✅ 深度研究完成")
+    except Exception as e:
+        logger.warning(f"深度研究失敗（{e}），退回 CoWork")
+        try:
+            export_prompt(news_id)
+        except Exception:
+            pass
+        db_manager.set_pipeline_status(
+            "researching", date=date,
+            error_msg=f"自動研究失敗：{e}｜請點「前往 CoWork 研究」手動操作"
+        )
+        return
 
+    # ── 步驟 2：腳本生成 ──
+    try:
         logger.info("▶ 自動模式：呼叫 claude CLI 生成腳本 JSON…")
         db_manager.set_pipeline_status("scripting", date=date, error_msg=None)
         auto_write_script(research_path)
-
-        logger.info("✅ 自動研究 + 腳本生成完成，進入腳本審閱")
+        logger.info("✅ 腳本生成完成，進入審閱")
         db_manager.set_pipeline_status("script_ready", date=date, error_msg=None)
-        return
-
-    except FileNotFoundError:
-        # claude CLI 未安裝 → 退回 CoWork
-        logger.warning("claude CLI 未找到，退回 CoWork 手動模式")
     except Exception as e:
-        logger.warning(f"自動模式失敗（{e}），退回 CoWork 手動模式")
-
-    # ── Fallback：CoWork 手動模式 ──
-    try:
-        from modules.script.researcher import export_prompt
-        export_prompt(news_id)
-        logger.info("研究 Prompt 已生成 → 請前往 Web UI /cowork/research")
-        db_manager.set_pipeline_status("researching", date=date,
-                                       error_msg="自動模式失敗，請至 CoWork 頁面手動操作")
-    except Exception as e2:
-        _fail("selected", str(e2), date or "")
+        logger.warning(f"腳本生成失敗（{e}），退回 CoWork")
+        db_manager.set_pipeline_status(
+            "scripting", date=date,
+            error_msg=f"自動腳本失敗：{e}｜請點「前往 CoWork 腳本」手動操作"
+        )
 
 
 def handle_researching(status: dict, date: str) -> None:

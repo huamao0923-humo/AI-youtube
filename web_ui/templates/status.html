@@ -15,8 +15,16 @@
 <div class="content">
 
   {% if status.error_msg %}
-  <div class="banner banner-warn">
-    ⚠️ 上一步發生錯誤：{{ status.error_msg[:120] }}
+  <div class="banner banner-warn" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <span>⚠️ {{ status.error_msg[:150] }}</span>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button class="btn btn-ghost btn-sm" onclick="retryAuto()" style="white-space:nowrap">↺ 重試自動模式</button>
+      {% if status.stage == 'researching' %}
+      <a href="/cowork/research" class="btn btn-primary btn-sm" style="white-space:nowrap">手動 CoWork →</a>
+      {% elif status.stage == 'scripting' %}
+      <a href="/cowork/script" class="btn btn-primary btn-sm" style="white-space:nowrap">手動 CoWork →</a>
+      {% endif %}
+    </div>
   </div>
   {% endif %}
 
@@ -76,7 +84,14 @@
         <div class="pipe-body">
           <div class="pipe-name">{{ name }}</div>
           <div class="pipe-desc">{{ desc }}</div>
-          {% if key == 'researching' %}
+          {% if key == 'selected' %}
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="startAuto()" id="btn-auto" class="btn btn-primary btn-sm">
+              ▶ 啟動自動模式（claude CLI）
+            </button>
+            <a href="/cowork/research" class="btn btn-ghost btn-sm">手動 CoWork →</a>
+          </div>
+          {% elif key == 'researching' %}
           <a href="/cowork/research" class="btn btn-primary btn-sm" style="margin-top:10px">🤖 前往 CoWork 研究 →</a>
           {% elif key == 'scripting' %}
           <a href="/cowork/script" class="btn btn-primary btn-sm" style="margin-top:10px">🤖 前往 CoWork 腳本 →</a>
@@ -131,5 +146,36 @@ evtSrc.onerror = () => {
 
 // 腳本審閱快捷
 function goScript() { location.href = '/script'; }
+
+// 重試自動模式：把 stage 重置回 selected，讓 watcher 重新跑
+async function retryAuto() {
+  const res = await fetch('/api/pipeline/retry', { method: 'POST' });
+  const d = await res.json();
+  if (d.ok) location.reload();
+  else alert('重試失敗：' + (d.error || ''));
+}
+
+// 啟動自動模式
+async function startAuto() {
+  const btn = document.getElementById('btn-auto');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ 啟動中…';
+  try {
+    const res = await fetch('/api/auto-start', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      btn.textContent = '✅ 已啟動，研究進行中…';
+    } else {
+      btn.disabled = false;
+      btn.textContent = '▶ 啟動自動模式（claude CLI）';
+      alert('啟動失敗：' + (data.error || '未知錯誤'));
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '▶ 啟動自動模式（claude CLI）';
+    alert('網路錯誤：' + e);
+  }
+}
 </script>
 {% endblock %}

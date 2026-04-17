@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +49,11 @@ def _latest_report() -> str | None:
 @app.route("/")
 @login_required
 def index():
-    brief = load_today() or generate()
+    date = request.args.get("date")   # None = 今日, "" = 全部, "YYYY-MM-DD" = 指定日期
+    if date is None:
+        brief = load_today() or generate()
+    else:
+        brief = generate(fetched_date=date)
     return render_template("index.html",
                            brief=brief,
                            status=db_manager.get_pipeline_status(),
@@ -59,8 +64,29 @@ def index():
 @app.route("/refresh")
 @login_required
 def refresh():
-    generate()
-    return redirect(url_for("index"))
+    date = request.args.get("date")
+    generate(fetched_date=date)
+    redirect_url = url_for("index") + (f"?date={date}" if date is not None else "")
+    return redirect(redirect_url)
+
+
+@app.route("/news-dates")
+@login_required
+def news_dates():
+    summary = db_manager.get_fetch_date_summary()
+    return render_template("news_dates.html",
+                           summary=summary,
+                           stats=_stats(),
+                           active="news_dates")
+
+
+@app.route("/clear-date", methods=["POST"])
+@login_required
+def clear_date():
+    date = request.form.get("date", "").strip()
+    if date:
+        db_manager.delete_news_by_date(date)
+    return redirect(url_for("news_dates"))
 
 
 @app.route("/select", methods=["POST"])
@@ -301,6 +327,50 @@ def api_scoring_import():
     return jsonify({"ok": True, "scored": len(updates), "candidates": candidates})
 
 
+# ─────────── 自動模式 API ───────────
+
+_auto_thread: threading.Thread | None = None
+
+
+@app.route("/api/auto-start", methods=["POST"])
+@login_required
+def api_auto_start():
+    """在背景執行 auto_research + auto_write_script，不需要啟動 watcher.py。"""
+    global _auto_thread
+    if _auto_thread and _auto_thread.is_alive():
+        return jsonify({"error": "自動模式已在執行中，請等待"}), 400
+
+    status  = db_manager.get_pipeline_status()
+    news_id = status.get("selected_id")
+    date    = status.get("date")
+    if not news_id:
+        return jsonify({"error": "尚未選題，請先在今日選題頁選定主題"}), 400
+
+    def _run():
+        try:
+            from modules.script.researcher import auto_research
+            from modules.script.script_writer import auto_write_script
+            db_manager.set_pipeline_status("researching", date=date, error_msg=None)
+            research_path = auto_research(news_id)
+            db_manager.set_pipeline_status("scripting", date=date, error_msg=None)
+            auto_write_script(research_path)
+            db_manager.set_pipeline_status("script_ready", date=date, error_msg=None)
+        except Exception as e:
+            try:
+                from modules.script.researcher import export_prompt
+                export_prompt(news_id)
+            except Exception:
+                pass
+            db_manager.set_pipeline_status(
+                "researching", date=date,
+                error_msg=f"自動模式失敗：{e}，請至 CoWork 頁面手動操作",
+            )
+
+    _auto_thread = threading.Thread(target=_run, daemon=True, name="auto-pipeline")
+    _auto_thread.start()
+    return jsonify({"ok": True})
+
+
 # ─────────── 連線測試 API ───────────
 
 @app.route("/api/test/db")
@@ -420,6 +490,20 @@ def api_brief():
 @login_required
 def api_stats():
     return jsonify(_stats())
+
+
+@app.route("/api/pipeline/retry", methods=["POST"])
+@login_required
+def api_pipeline_retry():
+    """重試：把 stage 重置回 selected，讓 watcher 重新執行自動流程。"""
+    status = db_manager.get_pipeline_status()
+    db_manager.set_pipeline_status("selected",
+                                   date=status.get("date"),
+                                   selected_id=status.get("selected_id"),
+                                   selected_angle=status.get("selected_angle"),
+                                   custom_note=status.get("custom_note"),
+                                   error_msg=None)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/pipeline/stage", methods=["POST"])
