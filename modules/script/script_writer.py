@@ -145,7 +145,7 @@ def save_script(json_text: str, out_dir: Path, news_id: int | None = None) -> Pa
 def _extract_json(text: str) -> dict:
     text = text.strip()
     # 去除 markdown code block
-    m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    m = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL)
     if m:
         text = m.group(1)
     # 找 JSON 邊界
@@ -163,28 +163,18 @@ def auto_write_script(research_path: Path) -> Path:
     使用 Claude Max 訂閱，等同於 CoWork。
     回傳 script.json 路徑。
     """
-    import subprocess
+    from modules.common.claude_cli import run as claude_run
     prompt, _ = export_prompt(research_path)
-
-    # 強化提示，確保只輸出 JSON
     cli_prompt = prompt + "\n\n重要：只輸出 JSON 本身，不要任何說明文字、markdown 或 code block。"
-
     logger.info("呼叫 claude CLI 生成腳本 JSON…")
-    result = subprocess.run(
-        ["claude", "-p", cli_prompt],
-        capture_output=True, text=True, encoding="utf-8", timeout=600
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"claude CLI 失敗（code={result.returncode}）：{result.stderr[:300]}"
-        )
-    raw = result.stdout.strip()
-    if not raw:
-        raise RuntimeError("claude CLI 回傳空白內容")
-
+    raw = claude_run(cli_prompt, timeout=600)
+    logger.info(f"claude 腳本輸出（前200字）：{raw[:200]}")
     research_data = json.loads(research_path.read_text(encoding="utf-8"))
     news_id = research_data.get("news_id")
-    out_path = save_script(raw, research_path.parent, news_id)
+    try:
+        out_path = save_script(raw, research_path.parent, news_id)
+    except Exception as e:
+        raise RuntimeError(f"JSON 解析失敗，claude 輸出前500字：{raw[:500]}") from e
     logger.info(f"腳本生成完成：{out_path}")
     return out_path
 

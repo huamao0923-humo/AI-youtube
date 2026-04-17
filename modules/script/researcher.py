@@ -167,20 +167,10 @@ def auto_research(news_id: int) -> Path:
     使用 Claude Max 訂閱，等同於 CoWork。
     回傳 research.json 路徑。
     """
-    import subprocess
-    prompt, out_dir = export_prompt(news_id)
+    from modules.common.claude_cli import run as claude_run
+    prompt, _ = export_prompt(news_id)
     logger.info(f"呼叫 claude CLI 進行深度研究（news_id={news_id}）…")
-    result = subprocess.run(
-        ["claude", "-p", prompt],
-        capture_output=True, text=True, encoding="utf-8", timeout=300
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"claude CLI 失敗（code={result.returncode}）：{result.stderr[:300]}"
-        )
-    research_text = result.stdout.strip()
-    if not research_text:
-        raise RuntimeError("claude CLI 回傳空白內容")
+    research_text = claude_run(prompt, timeout=300)
     logger.info(f"研究完成（{len(research_text)} 字）")
     return save_research(news_id, research_text)
 
