@@ -1401,22 +1401,56 @@ def _ai_parse_published(dt_str: str | None):
 
 def _ai_feed_tag(row) -> str:
     """把 NewsItem 分到 product / funding / partnership / research / policy / other。"""
-    import re
     title = (row.title or "").lower()
+    title_zh = row.title_zh or ""
+    text = title + " " + title_zh
     cat = (row.category or "").lower()
     src = (row.source_name or "").lower()
-    # research：arXiv / PWC / HF Papers
-    if "arxiv" in src or "papers" in src or "huggingface" in src:
+
+    # research：arXiv / PWC / HF Papers / GitHub Trending / Reddit r/ML
+    if any(k in src for k in ("arxiv", "papers", "huggingface", "github trending", "r/machinelearning", "r/locallm", "r/localllama")):
         return "research"
-    if cat == "policy":
+    if cat == "policy" or any(k in text for k in (
+        "regulat", "lawmaker", "senate", "congress", "fcc", "ftc", "eu ai act",
+        "監管", "法案", "法規", "立法", "政策", "禁令", "制裁",
+    )):
         return "policy"
-    if cat == "product" or any(k in title for k in ("launches", "releases", "announces", "unveils", "introduces", "發布", "推出", "上線")):
+    if cat == "product" or any(k in text for k in (
+        "launch", "release", "announce", "unveil", "introduc", "debut",
+        "ship", "roll out", "rolling out", "now available", "now live",
+        "goes live", "open beta", "open-source", "open source",
+        "發布", "推出", "上線", "上架", "開放", "開源", "公布", "正式", "亮相",
+    )):
         return "product"
-    if any(k in title for k in ("raises", "funding", "series ", "valuation", "ipo", "acquires", "acquisition", "融資", "併購", "收購")):
+    if any(k in text for k in (
+        "raise", "funding", "series ", "valuation", "valued at", "ipo",
+        "acquire", "acquisition", "buyout", "invest", "round",
+        "融資", "併購", "收購", "估值", "投資", "入股",
+    )):
         return "funding"
-    if any(k in title for k in ("partners with", "partnership", "teams up", "collaborat", "合作", "聯手")):
+    if any(k in text for k in (
+        "partner", "partnership", "teams up", "team up", "joint ", "joins forces",
+        "sign", "deal with", "collaborat", "alliance",
+        "合作", "聯手", "攜手", "結盟", "簽約", "共同",
+    )):
         return "partnership"
     return "other"
+
+
+_SUMMARY_NOISE = __import__("re").compile(
+    r"^(HN\s*points?:\s*\d+\s*(?:\|\s*comments?:\s*\d+)?|↑\d+\s*💬\s*\d+\s*[—\-:]?\s*)",
+    __import__("re").IGNORECASE,
+)
+
+def _clean_summary(raw: str | None, max_len: int = 180) -> str:
+    """去除 HN/Reddit 前綴雜訊，截短到 max_len 字元。"""
+    if not raw:
+        return ""
+    s = _SUMMARY_NOISE.sub("", raw.strip())
+    s = " ".join(s.split())
+    if len(s) > max_len:
+        s = s[:max_len].rstrip() + "…"
+    return s
 
 
 @app.route("/api/ai/latest-news")
@@ -1448,6 +1482,7 @@ def api_ai_latest_news():
                     "id": r.id,
                     "title": r.title_zh or r.title,    # 優先回中文
                     "title_en": r.title,
+                    "summary": _clean_summary(r.summary),
                     "url": r.url,
                     "source": r.source_name,
                     "published_at": r.published_at,
@@ -1629,6 +1664,7 @@ def api_ai_company_news(company_key: str):
                 "id": r.id,
                 "title": r.title_zh or r.title,
                 "title_en": r.title,
+                "summary": _clean_summary(r.summary),
                 "url": r.url,
                 "source": r.source_name,
                 "published_at": r.published_at,
