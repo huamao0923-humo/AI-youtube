@@ -1523,6 +1523,89 @@ def api_ai_company_activity():
     return jsonify(_cached("ai:companies", _produce))
 
 
+@app.route("/api/ai/kpi")
+def api_ai_kpi():
+    """頂部 KPI Strip — 四個指標：今日新聞 / 活躍公司 / 模型發布 30d / 最熱主題。"""
+    from datetime import datetime, timedelta, timezone
+    from modules.database.models import NewsItem, SessionLocal, Topic
+
+    def _produce():
+        from modules.ai_war_room.company_matcher import CompanyMatcher
+        from sqlalchemy import func
+
+        now = datetime.now(timezone.utc)
+        today = now.date().isoformat()
+        y_start = (now - timedelta(days=1)).date().isoformat()
+        cut_24h = (now - timedelta(hours=24)).isoformat()
+        cut_30d = (now - timedelta(days=30)).isoformat()
+
+        with SessionLocal() as s:
+            # 今日 AI 新聞
+            def _count_between(lo: str, hi: str | None = None) -> int:
+                q = s.query(func.count(NewsItem.id)).filter(NewsItem.is_ai == 1)
+                q = q.filter(NewsItem.published_at >= lo)
+                if hi:
+                    q = q.filter(NewsItem.published_at < hi)
+                return q.scalar() or 0
+
+            today_n = _count_between(today + "T00:00:00")
+            yesterday_n = _count_between(y_start + "T00:00:00", today + "T00:00:00")
+
+            # 活躍公司（24h 有 ≥1 則）
+            active_rows = (
+                s.query(NewsItem.ai_company, func.count(NewsItem.id))
+                .filter(NewsItem.is_ai == 1, NewsItem.ai_company.isnot(None),
+                        NewsItem.published_at >= cut_24h)
+                .group_by(NewsItem.ai_company)
+                .all()
+            )
+            active_count = len([k for k, _ in active_rows])
+            total_tracked = len(CompanyMatcher.load().all_companies())
+
+            # 模型發布 30 天
+            model_n = (
+                s.query(func.count(NewsItem.id))
+                .filter(NewsItem.is_ai == 1, NewsItem.model_release == 1,
+                        NewsItem.published_at >= cut_30d)
+                .scalar() or 0
+            )
+
+            # 最熱主題（24h 內 AI 新聞命中最多的 open topic）
+            hot_row = (
+                s.query(Topic, func.count(NewsItem.id).label("cnt"))
+                .join(NewsItem, NewsItem.topic_id == Topic.id)
+                .filter(NewsItem.is_ai == 1, NewsItem.published_at >= cut_24h)
+                .group_by(Topic.id)
+                .order_by(func.count(NewsItem.id).desc())
+                .first()
+            )
+            hot_topic = None
+            if hot_row:
+                t, cnt = hot_row
+                pct, arrow = _compute_arrow(t.heat_index or 0, t.heat_prev or 0)
+                hot_topic = {
+                    "title": t.title, "slug": t.slug,
+                    "heat": round(t.heat_index or 0, 2),
+                    "delta_pct": pct, "arrow": arrow, "news_count": int(cnt),
+                }
+
+        # 漲跌 %（今日 vs 昨日）
+        delta_pct = 0.0
+        if yesterday_n > 0:
+            delta_pct = round((today_n - yesterday_n) / yesterday_n * 100, 1)
+        elif today_n > 0:
+            delta_pct = 100.0
+
+        return {
+            "today_news":    {"value": today_n, "yesterday": yesterday_n, "delta_pct": delta_pct},
+            "active_cos":    {"value": active_count, "total": total_tracked},
+            "model_release": {"value": int(model_n), "window_days": 30},
+            "hot_topic":     hot_topic,
+        }
+
+    return jsonify(_cached("ai:kpi", _produce))
+
+
 @app.route("/api/ai/company-news/<company_key>")
 def api_ai_company_news(company_key: str):
     """某公司近期新聞（給動態牆 modal 使用）。"""

@@ -1,6 +1,14 @@
 (function () {
   const H = AiWarRoom;
-  let _timelineChart = null;
+
+  function dayOfRange(dateStr, rangeStart, rangeEnd) {
+    // 回傳 0..1 的百分比位置
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    const span = rangeEnd - rangeStart;
+    if (span <= 0) return null;
+    return Math.max(0, Math.min(1, (d.getTime() - rangeStart) / span));
+  }
 
   H.register({
     id: 'panel-models',
@@ -14,69 +22,66 @@
       const releases = (data.releases || []).filter(x => x.date);
       const benchmarks = data.benchmarks || [];
 
-      body.innerHTML = `
-        <div class="awr-models-wrap">
-          <div class="awr-timeline" id="awr-timeline-chart"></div>
-          <div class="awr-benchmarks">
-            <div style="font-size:12px;color:var(--awr-muted);margin-bottom:6px;">LMArena 排行</div>
-            ${benchmarks.length ? _renderBench(benchmarks) : '<div class="awr-empty">尚無資料</div>'}
-          </div>
-        </div>
-        ${releases.length === 0 ? '<div class="awr-empty" style="margin-top:10px;">近 180 天未偵測到模型發布</div>' : ''}`;
-
-      const tEl = body.querySelector('#awr-timeline-chart');
-      if (!tEl || !window.echarts) return;
-      if (_timelineChart) { try { _timelineChart.dispose(); } catch (e) {} _timelineChart = null; }
-      if (!releases.length) return;
-
+      // 分組：per company
       const byCompany = {};
-      releases.forEach(r => {
-        if (!r.company) return;
+      for (const r of releases) {
+        if (!r.company) continue;
         (byCompany[r.company] = byCompany[r.company] || []).push(r);
-      });
-      const companies = Object.keys(byCompany);
-      const series = companies.map((c, i) => ({
-        name: c,
-        type: 'scatter',
-        symbolSize: 14,
-        data: byCompany[c].map(r => ({
-          value: [r.date, i],
-          title: r.title,
-          url: r.url,
-        })),
-      }));
+      }
+      const companies = Object.keys(byCompany).sort((a, b) => byCompany[b].length - byCompany[a].length);
 
-      _timelineChart = window.echarts.init(tEl, null, { renderer: 'canvas' });
-      _timelineChart.setOption({
-        grid: { top: 20, left: 100, right: 20, bottom: 40 },
-        tooltip: {
-          formatter: p => `<b>${p.data.title || ''}</b><br>${p.seriesName} · ${p.data.value[0]}`,
-        },
-        xAxis: { type: 'time', axisLabel: { color: '#8a95a3' } },
-        yAxis: {
-          type: 'category',
-          data: companies,
-          axisLabel: { color: '#e5eaf0' },
-        },
-        series: series,
-      });
-      _timelineChart.off('click');
-      _timelineChart.on('click', p => { if (p.data && p.data.url) window.open(p.data.url, '_blank'); });
-      window.addEventListener('resize', () => { if (_timelineChart) _timelineChart.resize(); });
+      // 時間範圍（近 180 天）
+      const now = Date.now();
+      const rangeStart = now - 180 * 86400 * 1000;
+      const rangeEnd = now;
+
+      const railsHtml = companies.length ? companies.map(co => {
+        const dots = byCompany[co].map(r => {
+          const pos = dayOfRange(r.date, rangeStart, rangeEnd);
+          if (pos === null) return '';
+          return `<div class="dot" style="left:${(pos * 100).toFixed(1)}%;" title="${H.escapeHtml(r.title || '')} · ${r.date}" onclick="window.open('${H.escapeHtml(r.url || '')}','_blank')"></div>`;
+        }).join('');
+        return `
+          <div class="awr-model-rail">
+            <div class="co">${H.escapeHtml(co)}</div>
+            <div class="rail">${dots}</div>
+          </div>`;
+      }).join('') : '';
+
+      // 時間軸刻度（-180d、-90d、-30d、今天）
+      const axis = `
+        <div class="awr-model-rail-axis">
+          <div></div>
+          <div class="ticks">
+            <span>-180d</span><span>-90d</span><span>-30d</span><span>今</span>
+          </div>
+        </div>`;
+
+      // Benchmarks — 按 LMArena 排
+      let benchHtml = '';
+      if (benchmarks.length) {
+        const withLm = benchmarks.filter(b => typeof b.lmarena === 'number');
+        if (withLm.length) {
+          withLm.sort((a, b) => b.lmarena - a.lmarena);
+          const max = Math.max(...withLm.map(b => b.lmarena));
+          benchHtml = `
+            <div class="awr-bench-title">🏆 LMArena TOP ${Math.min(10, withLm.length)}</div>
+            ${withLm.slice(0, 10).map(b => `
+              <div class="awr-bench-row">
+                <div class="model" title="${H.escapeHtml(b.model)}">${H.escapeHtml(b.model)}</div>
+                <div class="bar"><span style="width:${Math.round(100 * b.lmarena / max)}%;"></span></div>
+                <div class="val">${b.lmarena}</div>
+              </div>`).join('')}`;
+        }
+      }
+
+      body.innerHTML = `
+        ${railsHtml ? `
+          <div class="awr-panel-meta" style="margin-bottom:4px;">模型發布時間軸（近 180 天，點 dot 開連結）</div>
+          <div class="awr-model-rails">${railsHtml}</div>
+          ${axis}
+        ` : '<div class="awr-empty">近 180 天未偵測到模型發布</div>'}
+        ${benchHtml}`;
     },
   });
-
-  function _renderBench(list) {
-    const metric = 'lmarena';
-    const withVal = list.filter(x => typeof x[metric] === 'number');
-    if (!withVal.length) return '<div class="awr-empty">無 LMArena 分數</div>';
-    const max = Math.max(...withVal.map(x => x[metric]));
-    withVal.sort((a, b) => b[metric] - a[metric]);
-    return withVal.slice(0, 10).map(x => `
-      <div class="awr-bench-row">
-        <div class="model" title="${H.escapeHtml(x.model)}">${H.escapeHtml(x.model)}</div>
-        <div class="bar"><span style="width:${Math.round(100 * x[metric] / max)}%"></span></div>
-        <div class="val">${x[metric]}</div>
-      </div>`).join('');
-  }
 })();

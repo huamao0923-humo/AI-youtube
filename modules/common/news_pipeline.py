@@ -22,7 +22,9 @@ from loguru import logger
 
 from pathlib import Path
 
+from modules.ai_war_room.company_matcher import CompanyMatcher
 from modules.ai_war_room.filter import is_ai_related, load_ai_source_whitelist
+from modules.ai_war_room.model_registry import detect_model_release
 from modules.common.logging_setup import setup_logger
 from modules.common.news_classifier import classify_slug
 from modules.common.region_detector import detect_region
@@ -71,6 +73,7 @@ def classify_and_persist(news_ids: list[int] | None = None,
             if not rows:
                 break
             ai_whitelist = _get_ai_whitelist()
+            matcher = CompanyMatcher.load()
             for row in rows:
                 item = {
                     "title": row.title,
@@ -86,6 +89,12 @@ def classify_and_persist(news_ids: list[int] | None = None,
                 item["category"] = row.category
                 is_ai, _matched = is_ai_related(item, ai_whitelist)
                 row.is_ai = is_ai
+                if is_ai:
+                    row.ai_company = matcher.match(row.title or "", row.summary or "")
+                    row.model_release = detect_model_release(row.title or "", row.summary or "", row.source_name or "")
+                else:
+                    row.ai_company = None
+                    row.model_release = 0
                 row.classified_at = now
                 processed += 1
             last_id = rows[-1].id
