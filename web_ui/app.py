@@ -1717,6 +1717,155 @@ def api_ai_unmark(mark_id: int):
     return jsonify({"ok": bool(ok)})
 
 
+# ─── 手動任務執行器（News 工作台按鈕 + 排程的同時入口）────────────
+#
+# 每個任務一 thread，全域 dict 記錄狀態供前端輪詢。
+# 同一任務若已在 running 則拒絕再觸發（回 409）。
+
+import subprocess
+import threading
+
+_task_states: dict[str, dict] = {}   # name → {status, started_at, finished_at, error, tail}
+_task_lock = threading.Lock()
+
+
+def _task_log_path(name: str) -> "Path":
+    logs_dir = PROJECT_ROOT / "data" / "logs" / "tasks"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    return logs_dir / f"{name}.log"
+
+
+def _run_subprocess_task(name: str, cmd: list[str]) -> None:
+    """背景 thread 入口：跑 subprocess 並更新狀態。"""
+    import datetime as _dt
+    log_path = _task_log_path(name)
+    started = _dt.datetime.now().isoformat(timespec="seconds")
+    with _task_lock:
+        _task_states[name] = {"status": "running", "started_at": started,
+                              "finished_at": None, "error": None, "tail": ""}
+    try:
+        with open(log_path, "w", encoding="utf-8") as logf:
+            logf.write(f"[{started}] CMD: {' '.join(cmd)}\n\n")
+            logf.flush()
+            p = subprocess.Popen(
+                cmd, cwd=str(PROJECT_ROOT), stdout=logf, stderr=subprocess.STDOUT,
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+            )
+            rc = p.wait()
+        # 讀尾巴 15 行做摘要
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            tail = "".join(lines[-15:])[-1500:]
+        except Exception:
+            tail = ""
+        finished = _dt.datetime.now().isoformat(timespec="seconds")
+        with _task_lock:
+            _task_states[name].update({
+                "status": "ok" if rc == 0 else "failed",
+                "finished_at": finished,
+                "error": None if rc == 0 else f"exit code {rc}",
+                "tail": tail,
+            })
+    except Exception as e:
+        with _task_lock:
+            _task_states[name].update({
+                "status": "failed",
+                "finished_at": _dt.datetime.now().isoformat(timespec="seconds"),
+                "error": str(e), "tail": "",
+            })
+
+
+def _run_python_task(name: str, args: list[str]) -> None:
+    cmd = [sys.executable, *args]
+    _run_subprocess_task(name, cmd)
+
+
+def _run_refresh_chain() -> None:
+    """一鍵：爬 → 分類 → 補 AI 欄位 → 翻譯。任一步失敗後續仍跑（不阻塞）。"""
+    import datetime as _dt
+    started = _dt.datetime.now().isoformat(timespec="seconds")
+    with _task_lock:
+        _task_states["refresh_all"] = {"status": "running", "started_at": started,
+                                        "finished_at": None, "error": None, "tail": ""}
+    sub_specs = [
+        ("fetch",     [sys.executable, "daily_pipeline.py", "--fetch"]),
+        ("classify",  [sys.executable, "-m", "modules.common.news_pipeline"]),
+        ("backfill",  [sys.executable, "-m", "modules.ai_war_room.backfill"]),
+        ("translate", [sys.executable, "-m", "modules.ai_war_room.translator", "--batch", "5"]),
+    ]
+    failed: list[str] = []
+    for sub_name, cmd in sub_specs:
+        _run_subprocess_task(sub_name, cmd)
+        if _task_states.get(sub_name, {}).get("status") != "ok":
+            failed.append(sub_name)
+    finished = _dt.datetime.now().isoformat(timespec="seconds")
+    with _task_lock:
+        _task_states["refresh_all"].update({
+            "status": "ok" if not failed else "failed",
+            "finished_at": finished,
+            "error": None if not failed else f"步驟失敗：{', '.join(failed)}",
+            "tail": f"完成 {len(sub_specs) - len(failed)}/{len(sub_specs)} 步驟",
+        })
+
+
+_TASK_SPECS: dict[str, dict] = {
+    "fetch":       {"label": "📡 爬取新聞",     "desc": "抓取所有 RSS / 網頁源 → 寫入 DB", "args": ["daily_pipeline.py", "--fetch"]},
+    "classify":    {"label": "🏷️ 分類新聞",     "desc": "寫入 category / region / is_ai",  "args": ["-m", "modules.common.news_pipeline"]},
+    "backfill":    {"label": "🏢 補公司 / 模型", "desc": "AI 戰情室用 — ai_company / model_release", "args": ["-m", "modules.ai_war_room.backfill"]},
+    "translate":   {"label": "🌐 翻譯標題",     "desc": "本地 Claude CLI 翻譯英文標題為繁中", "args": ["-m", "modules.ai_war_room.translator", "--batch", "5"]},
+    "brief":       {"label": "📋 生成 Brief",   "desc": "Daily Brief + 熱度指數刷新",      "args": ["daily_pipeline.py", "--brief"]},
+    "score":       {"label": "⭐ 匯出評分佇列", "desc": "產生 scoring_queue.json 供 CoWork", "args": ["daily_pipeline.py", "--score"]},
+    "analytics":   {"label": "📊 更新 YouTube 數據", "desc": "刷新已上傳影片的觀看數",    "args": ["-c", "from modules.database.analytics_tracker import update_video_analytics; update_video_analytics()"]},
+    "weekly":      {"label": "📰 產生週報",     "desc": "寫入 data/reports/*.md",          "args": ["-c", "from modules.database.analytics_tracker import generate_weekly_report; print(generate_weekly_report())"]},
+}
+
+
+@app.route("/api/tasks")
+def api_tasks_status():
+    """回目前所有任務狀態 + 規格。"""
+    with _task_lock:
+        states = dict(_task_states)
+    return jsonify({
+        "specs": {k: {"label": v["label"], "desc": v["desc"]} for k, v in _TASK_SPECS.items()},
+        "states": states,
+    })
+
+
+@app.route("/api/tasks/<name>", methods=["POST"])
+@login_required
+def api_tasks_run(name: str):
+    """觸發任務。同一任務 running 中時回 409。"""
+    with _task_lock:
+        current = _task_states.get(name, {}).get("status")
+        if current == "running":
+            return jsonify({"error": "已在執行中", "status": "running"}), 409
+
+    if name == "refresh_all":
+        threading.Thread(target=_run_refresh_chain, daemon=True).start()
+        return jsonify({"ok": True, "name": name})
+
+    spec = _TASK_SPECS.get(name)
+    if not spec:
+        return jsonify({"error": "unknown task"}), 404
+    threading.Thread(target=_run_python_task, args=(name, spec["args"]), daemon=True).start()
+    return jsonify({"ok": True, "name": name})
+
+
+@app.route("/api/tasks/<name>/log")
+@login_required
+def api_tasks_log(name: str):
+    """下載該任務最近一次的 stdout log。"""
+    p = _task_log_path(name)
+    if not p.exists():
+        return jsonify({"error": "no log"}), 404
+    try:
+        content = p.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
 # ─── 每日排程背景 daemon（APScheduler BackgroundScheduler）────────
 _scheduler_started = False
 

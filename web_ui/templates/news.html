@@ -127,6 +127,83 @@
   border-radius: 4px;
   color: var(--accent2, #8b5cf6);
 }
+
+/* ── 手動任務面板 ── */
+.tasks-section {
+  margin: 20px 0 30px;
+  padding: 18px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.tasks-section h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.tasks-sub { color: var(--text3, #71717a); font-size: 12px; margin-bottom: 14px; }
+.tasks-hero {
+  display: flex; gap: 10px; align-items: center;
+  padding: 12px 14px; margin-bottom: 14px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+}
+.tasks-hero .btn-hero {
+  padding: 8px 16px;
+  font-size: 14px; font-weight: 700;
+  background: var(--accent2, #8b5cf6); color: #fff;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+.tasks-hero .btn-hero:hover { filter: brightness(1.1); }
+.tasks-hero .btn-hero:disabled { opacity: 0.5; cursor: not-allowed; }
+.tasks-hero-meta { font-size: 12px; color: var(--text3, #71717a); flex: 1; }
+
+.tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.tasks-subgroup-title {
+  grid-column: 1 / -1;
+  font-size: 12px; font-weight: 700;
+  color: var(--text3, #71717a);
+  margin: 6px 0 -2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.task-btn {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px;
+  background: var(--surface2, #1a1a1f);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .12s;
+  color: var(--text);
+  font: inherit;
+}
+.task-btn:hover:not(:disabled) {
+  border-color: var(--accent2, #8b5cf6);
+  transform: translateY(-1px);
+}
+.task-btn:disabled { opacity: 0.55; cursor: wait; }
+.task-btn-head { display: flex; align-items: center; gap: 6px; }
+.task-btn-label { font-size: 13px; font-weight: 600; flex: 1; }
+.task-btn-dot { width: 8px; height: 8px; border-radius: 50%; background: #52525b; flex-shrink: 0; }
+.task-btn-dot.ok { background: #22c55e; }
+.task-btn-dot.failed { background: #ef4444; }
+.task-btn-dot.running { background: #f59e0b; animation: task-pulse 0.8s infinite; }
+@keyframes task-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.task-btn-desc { font-size: 11px; color: var(--text3, #71717a); line-height: 1.35; }
+.task-btn-meta {
+  font-size: 10px; color: var(--text3, #71717a);
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 2px;
+}
+.task-btn-meta a { color: var(--accent2, #8b5cf6); text-decoration: none; }
+.task-btn-meta a:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
@@ -210,6 +287,21 @@
     </a>
   </div>
 
+  <!-- ── 手動任務面板 ── -->
+  <div class="tasks-section">
+    <h3>🛠️ 手動執行任務 <span style="font-size:11px;color:var(--text3);font-weight:500;">（等同每日 06:00 / 07:00 排程）</span></h3>
+    <div class="tasks-sub">每個任務在背景執行，不會阻塞頁面。完成後狀態燈會變綠，可點「log」查看輸出。</div>
+
+    <div class="tasks-hero">
+      <button class="btn-hero" data-task="refresh_all">🔥 一鍵更新戰情室</button>
+      <div class="tasks-hero-meta">依序：爬新聞 → 分類 → 補公司 / 模型 → 翻譯（約 5–15 分鐘）</div>
+      <span class="task-btn-dot" data-dot="refresh_all"></span>
+      <span style="font-size:11px;color:var(--text3);" data-time="refresh_all">未執行</span>
+    </div>
+
+    <div class="tasks-grid" id="tasks-grid"></div>
+  </div>
+
   <!-- ── 操作說明 ── -->
   <div class="nw-guide">
     <h3>💡 新手操作指南</h3>
@@ -223,4 +315,110 @@
   </div>
 
 </div>
+
+<script>
+(function() {
+  const GRID = document.getElementById('tasks-grid');
+  // 子分組：核心（每日需跑） vs 影片 & 數據
+  const GROUPS = [
+    { title: '核心流程（跟戰情室資料相關）', keys: ['fetch', 'classify', 'backfill', 'translate'] },
+    { title: '其他任務',                      keys: ['brief', 'score', 'analytics', 'weekly'] },
+  ];
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d)) return iso.slice(11, 19);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return '剛剛';
+    if (diff < 3600) return Math.floor(diff / 60) + ' 分前';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' 時前';
+    return d.toLocaleString('zh-TW', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+  }
+
+  function render(specs, states) {
+    // 先渲染 grid（第一次才需要）
+    if (!GRID.hasChildNodes()) {
+      const html = GROUPS.map(g => {
+        const cards = g.keys.filter(k => specs[k]).map(k => `
+          <button class="task-btn" data-task="${k}">
+            <div class="task-btn-head">
+              <span class="task-btn-dot" data-dot="${k}"></span>
+              <span class="task-btn-label">${specs[k].label}</span>
+            </div>
+            <div class="task-btn-desc">${specs[k].desc}</div>
+            <div class="task-btn-meta">
+              <span data-time="${k}">未執行</span>
+              <a href="/api/tasks/${k}/log" target="_blank" onclick="event.stopPropagation();">log →</a>
+            </div>
+          </button>`).join('');
+        return `<div class="tasks-subgroup-title">${g.title}</div>${cards}`;
+      }).join('');
+      GRID.innerHTML = html;
+
+      // 綁定點擊 — 包含 hero 按鈕
+      document.querySelectorAll('[data-task]').forEach(el => {
+        el.addEventListener('click', () => trigger(el.dataset.task));
+      });
+    }
+
+    // 更新所有 dot / time
+    Object.keys(specs).concat(['refresh_all']).forEach(k => {
+      const st = states[k] || {};
+      const dot = document.querySelector(`[data-dot="${k}"]`);
+      const tm = document.querySelector(`[data-time="${k}"]`);
+      if (dot) {
+        dot.classList.remove('ok', 'failed', 'running');
+        if (st.status) dot.classList.add(st.status);
+        const error = st.error ? `\n錯誤：${st.error}` : '';
+        dot.title = (st.status || '未執行') + error;
+      }
+      if (tm) {
+        const when = st.status === 'running' ? '執行中…'
+                   : st.finished_at ? fmtTime(st.finished_at)
+                   : st.started_at ? fmtTime(st.started_at)
+                   : '未執行';
+        tm.textContent = when;
+      }
+      const btn = document.querySelector(`[data-task="${k}"]`);
+      if (btn) btn.disabled = (st.status === 'running');
+    });
+  }
+
+  let _polling = false;
+  async function poll() {
+    if (_polling) return;
+    _polling = true;
+    try {
+      const r = await fetch('/api/tasks');
+      if (!r.ok) return;
+      const d = await r.json();
+      render(d.specs, d.states);
+    } finally { _polling = false; }
+  }
+
+  async function trigger(name) {
+    const btn = document.querySelector(`[data-task="${name}"]`);
+    if (btn) btn.disabled = true;
+    try {
+      const r = await fetch(`/api/tasks/${name}`, { method: 'POST' });
+      if (r.status === 409) {
+        // 已在跑
+      } else if (!r.ok) {
+        alert('觸發失敗：HTTP ' + r.status);
+      }
+      poll();
+    } catch (e) { alert('錯誤：' + e.message); }
+    // 立刻進入較密集的輪詢
+    let ticks = 0;
+    const t = setInterval(() => {
+      poll();
+      if (++ticks > 600) clearInterval(t);  // 最多 10 分鐘快輪
+    }, 1500);
+  }
+
+  poll();
+  setInterval(poll, 5000);  // 平時 5 秒輪一次
+})();
+</script>
 {% endblock %}
