@@ -72,7 +72,9 @@ class NewsItem(Base):
     ai_company      = Column(String(32), index=True)           # openai|anthropic|gdeepmind|meta|xai|...
     model_release   = Column(Integer, default=0)               # 0/1，命中 GPT-\d / Claude \d 等
     title_zh        = Column(Text)                             # 翻譯後的繁體中文標題（本地 CLI 寫入）
-    translated_at   = Column(String(64))                       # 翻譯時間戳，避免重複翻
+    translated_at   = Column(String(64))                       # 標題翻譯時間戳
+    summary_zh      = Column(Text)                             # 翻譯後的繁體中文摘要
+    summary_translated_at = Column(String(64))                 # 摘要翻譯時間戳
 
 
 class Episode(Base):
@@ -265,6 +267,8 @@ def _migrate_columns() -> None:
             ("model_release", "INTEGER"),
             ("title_zh", "TEXT"),
             ("translated_at", "VARCHAR(64)"),
+            ("summary_zh", "TEXT"),
+            ("summary_translated_at", "VARCHAR(64)"),
         ],
         "episode_status": [
             ("selected_topic_id", "INTEGER"),

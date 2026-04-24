@@ -1480,9 +1480,9 @@ def api_ai_latest_news():
                     continue
                 out.append({
                     "id": r.id,
-                    "title": r.title_zh or r.title,    # 優先回中文
+                    "title": r.title_zh or r.title,
                     "title_en": r.title,
-                    "summary": _clean_summary(r.summary),
+                    "summary": r.summary_zh or _clean_summary(r.summary),
                     "url": r.url,
                     "source": r.source_name,
                     "published_at": r.published_at,
@@ -1664,7 +1664,7 @@ def api_ai_company_news(company_key: str):
                 "id": r.id,
                 "title": r.title_zh or r.title,
                 "title_en": r.title,
-                "summary": _clean_summary(r.summary),
+                "summary": r.summary_zh or _clean_summary(r.summary),
                 "url": r.url,
                 "source": r.source_name,
                 "published_at": r.published_at,
@@ -2024,13 +2024,15 @@ def start_scheduler_thread() -> None:
     sched.add_job(job_update_analytics, CronTrigger(hour=22, minute=0), id="analytics", name="更新數據")
     sched.add_job(job_weekly_report, CronTrigger(day_of_week="mon", hour=9), id="weekly", name="週報")
 
-    # AI 戰情室專用：每次抓取完成 30 分鐘後自動翻譯新增的 AI 新聞標題
+    # AI 戰情室專用：每次抓取完成 30 分鐘後自動翻譯新增的 AI 新聞標題 + 摘要
     def _job_translate_ai_news():
         from loguru import logger
         try:
-            from modules.ai_war_room.translator import translate
-            r = translate(limit=500)
-            logger.info(f"[Scheduler] 翻譯：{r}")
+            from modules.ai_war_room.translator import translate_titles, translate_summaries
+            r1 = translate_titles(limit=500)
+            logger.info(f"[Scheduler] 翻譯標題：{r1}")
+            r2 = translate_summaries(limit=500)
+            logger.info(f"[Scheduler] 翻譯摘要：{r2}")
         except Exception as e:
             logger.warning(f"[Scheduler] 翻譯任務失敗：{e}")
 
