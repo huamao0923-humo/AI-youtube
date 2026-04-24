@@ -222,19 +222,9 @@ community_research:
     priority: 7
     scrape_method: "scrape"
 
-  - name: "LMSYS / LMArena Blog"
-    rss: "https://lmsys.org/blog/index.xml"
-    priority: 8
-    scrape_method: "rss"
-
   - name: "NVIDIA Developer GenAI Blog"
     rss: "https://developer.nvidia.com/blog/category/generative-ai/feed/"
     priority: 8
-    scrape_method: "rss"
-
-  - name: "Oracle AI Blog"
-    rss: "https://blogs.oracle.com/ai-and-datascience/rss"
-    priority: 6
     scrape_method: "rss"
 
   - name: "Inflection AI"

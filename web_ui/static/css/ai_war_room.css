@@ -203,3 +203,31 @@
   text-decoration: none;
 }
 .awr-episode-link:hover { text-decoration: underline; }
+
+/* Company Modal */
+.awr-company-modal {
+  border: none;
+  background: #0f1729;
+  color: var(--awr-text);
+  border-radius: 12px;
+  padding: 0;
+  min-width: 560px;
+  max-width: 820px;
+  width: 80vw;
+  max-height: 85vh;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+.awr-company-modal::backdrop { background: rgba(0,0,0,0.6); }
+.awr-company-modal-inner { padding: 18px 20px; }
+.awr-company-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--awr-border);
+}
+.awr-company-modal-head h3 { margin: 0; font-size: 16px; }
+.awr-company-modal-body { max-height: 72vh; overflow-y: auto; }
+.awr-company-card[data-company] { cursor: pointer; }
+.awr-company-card:not([data-company]) { cursor: default; opacity: 0.65; }

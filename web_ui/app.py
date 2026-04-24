@@ -1446,7 +1446,8 @@ def api_ai_latest_news():
                     continue
                 out.append({
                     "id": r.id,
-                    "title": r.title,
+                    "title": r.title_zh or r.title,    # 優先回中文
+                    "title_en": r.title,
                     "url": r.url,
                     "source": r.source_name,
                     "published_at": r.published_at,
@@ -1493,7 +1494,7 @@ def api_ai_company_activity():
                 k = r.ai_company
                 if k not in latest_by_company:
                     latest_by_company[k] = {
-                        "title": r.title,
+                        "title": r.title_zh or r.title,
                         "url": r.url,
                         "published_at": r.published_at,
                         "source": r.source_name,
@@ -1520,6 +1521,38 @@ def api_ai_company_activity():
             return result
 
     return jsonify(_cached("ai:companies", _produce))
+
+
+@app.route("/api/ai/company-news/<company_key>")
+def api_ai_company_news(company_key: str):
+    """某公司近期新聞（給動態牆 modal 使用）。"""
+    from modules.database.models import NewsItem, SessionLocal
+    try:
+        limit = max(1, min(50, int(request.args.get("limit", 20))))
+    except ValueError:
+        limit = 20
+
+    def _produce():
+        with SessionLocal() as s:
+            rows = (
+                s.query(NewsItem)
+                .filter(NewsItem.is_ai == 1, NewsItem.ai_company == company_key)
+                .order_by(NewsItem.published_at.desc().nullslast(),
+                          NewsItem.fetched_at.desc().nullslast())
+                .limit(limit)
+                .all()
+            )
+            return [{
+                "id": r.id,
+                "title": r.title_zh or r.title,
+                "title_en": r.title,
+                "url": r.url,
+                "source": r.source_name,
+                "published_at": r.published_at,
+                "category": r.category,
+            } for r in rows]
+
+    return jsonify(_cached(f"ai:company:{company_key}:{limit}", _produce))
 
 
 @app.route("/api/ai/trending-topics")
@@ -1684,9 +1717,67 @@ def api_ai_unmark(mark_id: int):
     return jsonify({"ok": bool(ok)})
 
 
+# ─── 每日排程背景 daemon（APScheduler BackgroundScheduler）────────
+_scheduler_started = False
+
+
+def start_scheduler_thread() -> None:
+    """把 scheduler.py 裡的 cron job 搬到 Flask 同 process 的背景 daemon。
+
+    這樣使用者只需開 `python web_ui/app.py`，就能自動每日 06:00 抓取。
+    SCHEDULER_ENABLED=0 可關閉（例如多 worker 或獨立 scheduler process 情境）。
+    """
+    global _scheduler_started
+    if _scheduler_started:
+        return
+    if os.getenv("SCHEDULER_ENABLED", "1") == "0":
+        print("[Scheduler] SCHEDULER_ENABLED=0，跳過啟動")
+        return
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+    except ImportError:
+        print("[Scheduler] 未安裝 APScheduler，跳過；pip install APScheduler>=3.10")
+        return
+
+    # 重用 scheduler.py 定義的 job 函式
+    from scheduler import (
+        job_compose_and_upload,
+        job_fetch_and_score,
+        job_generate_brief,
+        job_update_analytics,
+        job_weekly_report,
+    )
+
+    sched = BackgroundScheduler(timezone="Asia/Taipei", daemon=True)
+    sched.add_job(job_fetch_and_score, CronTrigger(hour=6, minute=0), id="fetch", name="抓取新聞")
+    sched.add_job(job_generate_brief, CronTrigger(hour=6, minute=30), id="brief", name="生成 Brief")
+    sched.add_job(job_compose_and_upload, CronTrigger(hour=14, minute=0), id="compose", name="影片合成上傳")
+    sched.add_job(job_update_analytics, CronTrigger(hour=22, minute=0), id="analytics", name="更新數據")
+    sched.add_job(job_weekly_report, CronTrigger(day_of_week="mon", hour=9), id="weekly", name="週報")
+
+    # AI 戰情室專用：每次抓取完成 30 分鐘後自動翻譯新增的 AI 新聞標題
+    def _job_translate_ai_news():
+        from loguru import logger
+        try:
+            from modules.ai_war_room.translator import translate
+            r = translate(limit=500)
+            logger.info(f"[Scheduler] 翻譯：{r}")
+        except Exception as e:
+            logger.warning(f"[Scheduler] 翻譯任務失敗：{e}")
+
+    sched.add_job(_job_translate_ai_news, CronTrigger(hour=7, minute=0),
+                  id="translate", name="翻譯 AI 新聞標題")
+
+    sched.start()
+    _scheduler_started = True
+    print("[Scheduler] 已啟動（台灣時間）：06:00 爬取、06:30 brief、07:00 翻譯、14:00 合成、22:00 數據、週一 09:00 週報")
+
+
 # 模組載入時自動啟動（讓 gunicorn / flask / 直接跑 都能觸發）
 init_db()
 start_watcher_thread()
+start_scheduler_thread()
 
 
 if __name__ == "__main__":
