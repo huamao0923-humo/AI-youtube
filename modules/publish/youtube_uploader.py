@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from modules.common.utils import tw_today
 from pathlib import Path
 
@@ -87,9 +87,20 @@ def upload(
     title_index: int = 0,
     privacy: str | None = None,
     schedule: bool = True,
+    *,
+    slug: str | None = None,
 ) -> str:
-    """上傳影片，回傳 YouTube video_id。"""
+    """上傳影片，回傳 YouTube video_id。slug 有值時進度寫進 EpisodeStatus。"""
     from googleapiclient.http import MediaFileUpload
+
+    def _p(msg: str) -> None:
+        logger.info(msg)
+        if slug:
+            try:
+                from modules.database import db_manager
+                db_manager.update_episode_progress(slug, msg)
+            except Exception:
+                pass
 
     script = json.loads(script_path.read_text(encoding="utf-8"))
     cfg = settings()["youtube"]
@@ -120,7 +131,8 @@ def upload(
 
     youtube = _build_youtube()
 
-    logger.info(f"開始上傳：{video_path.name}（{video_path.stat().st_size / 1024 / 1024:.1f} MB）")
+    size_mb = video_path.stat().st_size / 1024 / 1024
+    _p(f"📤 開始上傳 {video_path.name}（{size_mb:.1f} MB）")
 
     media = MediaFileUpload(str(video_path), mimetype="video/mp4",
                             chunksize=10 * 1024 * 1024, resumable=True)
@@ -131,10 +143,10 @@ def upload(
         status, response = request.next_chunk()
         if status:
             pct = int(status.progress() * 100)
-            logger.info(f"上傳中... {pct}%")
+            _p(f"📤 YouTube 上傳 {pct}%（{size_mb * status.progress():.1f}/{size_mb:.1f} MB）")
 
     video_id = response["id"]
-    logger.info(f"上傳完成：https://youtu.be/{video_id}")
+    _p(f"✅ 上傳完成：youtu.be/{video_id}")
     return video_id
 
 
@@ -147,40 +159,48 @@ def upload_thumbnail(video_id: str, thumbnail_path: Path) -> None:
 
 
 def save_episode(video_id: str, script_path: Path, video_path: Path) -> None:
-    """把這集記錄寫入 DB。"""
+    """把這集記錄寫入 DB（upsert by slug，支援多集並行）。"""
     from modules.database import db_manager
-    from modules.database.models import Episode, SessionLocal
+    from modules.database.models import TopicHistory
+    from modules.storage.local_storage import get_episode_paths
+    import re
+
     script = json.loads(script_path.read_text(encoding="utf-8"))
     title = (script.get("title_options") or [""])[0]
     today = tw_today()
     news_id = script.get("_meta", {}).get("news_id")
+    slug = script_path.parent.name
+    paths = get_episode_paths(slug)
 
+    # upsert Episode by slug
+    db_manager.upsert_episode(
+        slug=slug,
+        date=today,
+        news_item_id=news_id,
+        script_path=str(script_path),
+        audio_path=paths["audio_full"]["path"] if paths["audio_full"]["exists"] else None,
+        images_dir=paths["images_dir"]["path"] if paths["images_dir"]["exists"] else None,
+        thumbnail_path=paths["thumbnail"]["path"] if paths["thumbnail"]["exists"] else None,
+        video_path=str(video_path),
+        youtube_id=video_id,
+        title=title,
+        published_at=datetime.now(timezone.utc).isoformat(),
+        status="uploaded",
+    )
+
+    # topic_history：記錄本次主題，避免未來重複
+    ep = db_manager.get_episode_by_slug(slug) or {}
+    ep_id = ep.get("id")
     with db_manager.get_session() as s:
-        ep = Episode(
-            date=today,
-            news_item_id=news_id,
-            script_path=str(script_path),
-            video_path=str(video_path),
-            youtube_id=video_id,
-            title=title,
-            published_at=datetime.now(timezone.utc).isoformat(),
-        )
-        s.add(ep)
-        s.flush()
-
-        # topic_history：記錄本次主題，避免未來重複
-        from modules.database.models import TopicHistory
-        import re
         keywords = re.findall(r'[A-Z][a-zA-Z]+|[\u4e00-\u9fff]{2,6}', title)[:3]
         for kw in keywords:
-            s.add(TopicHistory(
-                topic_keyword=kw,
-                used_date=today,
-                episode_id=ep.id,
-            ))
+            s.add(TopicHistory(topic_keyword=kw, used_date=today, episode_id=ep_id))
 
+    # 新架構：更新 EpisodeStatus
+    db_manager.set_episode_status(slug=slug, stage="done", date=today, error_msg=None)
+    # Legacy 相容
     db_manager.set_pipeline_status("done")
-    logger.info(f"Episode 記錄已存入 DB：{title}")
+    logger.info(f"[{slug}] Episode 記錄已存入 DB：{title}")
 
 
 def upload_shorts(script_path: Path, shorts_video: Path | None = None) -> str | None:

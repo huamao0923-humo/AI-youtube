@@ -1,0 +1,962 @@
+{% extends "base.html" %}
+{% block title %}{{ episode.title or slug }}{% endblock %}
+
+{% block head %}
+<style>
+/* ── Stage Stepper ── */
+.ep-stepper {
+  display: flex;
+  align-items: center;
+  padding: 18px 4px;
+  margin: 8px 0 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  gap: 2px;
+  overflow-x: auto;
+}
+.ep-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 62px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.ep-step-dot {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  background: var(--surface2, #1a1a1f);
+  border: 1.5px solid var(--border);
+  color: var(--text3, #71717a);
+  transition: all .25s;
+}
+.ep-step-label {
+  font-size: 10.5px;
+  color: var(--text3, #71717a);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.ep-step-done .ep-step-dot {
+  background: rgba(34,197,94,0.18);
+  border-color: #22c55e; color: #22c55e;
+}
+.ep-step-done .ep-step-label { color: #22c55e; }
+/* 目前步驟：放大 + 強烈發光 */
+.ep-step-cur .ep-step-dot {
+  width: 44px; height: 44px; font-size: 18px;
+  background: rgba(139,92,246,0.28);
+  border: 2.5px solid #8b5cf6; color: #a78bfa;
+  box-shadow: 0 0 0 4px rgba(139,92,246,0.18);
+  animation: ep-pulse 2s ease-in-out infinite;
+}
+.ep-step-cur .ep-step-label { color: #a78bfa; font-size: 12px; font-weight: 800; }
+.ep-step-err .ep-step-dot {
+  width: 44px; height: 44px; font-size: 18px;
+  background: rgba(239,68,68,0.22);
+  border: 2.5px solid #ef4444; color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239,68,68,0.15);
+  animation: none;
+}
+.ep-step-err .ep-step-label { color: #ef4444; font-weight: 700; }
+.ep-step-wait .ep-step-dot {
+  width: 44px; height: 44px; font-size: 18px;
+  background: rgba(245,158,11,0.18);
+  border: 2.5px solid #fbbf24; color: #fbbf24;
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.15);
+}
+.ep-step-wait .ep-step-label { color: #fbbf24; font-size: 12px; font-weight: 800; }
+.ep-step-line {
+  flex: 1; height: 2px; min-width: 10px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.ep-step-line.done { background: #22c55e; }
+@keyframes ep-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.5); }
+  50%      { box-shadow: 0 0 0 7px rgba(139,92,246,0); }
+}
+
+/* ── script_ready / upload_ready 大紅行動按鈕 ── */
+.ep-action-urgent {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.04));
+  border: 1px solid rgba(245,158,11,0.45);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.ep-action-urgent-msg {
+  display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1 1 320px;
+}
+.ep-action-urgent-icon { font-size: 30px; flex-shrink: 0; }
+.ep-action-urgent-title {
+  font-size: 14px; font-weight: 800; color: #fbbf24; letter-spacing: -.01em;
+}
+.ep-action-urgent-sub {
+  font-size: 12px; color: var(--text3, #a1a1aa); margin-top: 3px; line-height: 1.5;
+}
+.btn-xl {
+  font-size: 14px; padding: 11px 22px; font-weight: 800;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+.btn-xl:hover { transform: translateY(-1px); }
+
+/* ── 執行中：大型進度 Hero ── */
+.ep-progress-hero {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 22px;
+  padding: 22px 26px;
+  margin-bottom: 18px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.13) 0%, rgba(139,92,246,0.04) 100%);
+  border: 1.5px solid rgba(139,92,246,0.4);
+  border-radius: 14px;
+}
+.ep-progress-hero::before {
+  content: '';
+  position: absolute; top: 0; left: -100%; right: -100%; height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #8b5cf6 50%, transparent 100%);
+  animation: ep-scan 2.2s linear infinite;
+}
+@keyframes ep-scan {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(150%); }
+}
+.ep-progress-hero-icon {
+  font-size: 44px; flex-shrink: 0; line-height: 1;
+  animation: ep-bounce 1.8s ease-in-out infinite;
+}
+@keyframes ep-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+.ep-progress-hero-body { flex: 1; min-width: 0; }
+.ep-progress-hero-label {
+  font-size: 11px; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: #a78bfa; margin-bottom: 6px;
+}
+.ep-progress-hero-detail {
+  font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.55;
+  word-break: break-word; min-height: 1.55em;
+}
+.ep-progress-hero-bar {
+  height: 3px; margin-top: 12px;
+  background: rgba(139,92,246,0.2); border-radius: 2px; overflow: hidden;
+}
+.ep-progress-hero-bar-inner {
+  height: 100%; width: 38%; border-radius: 2px;
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  animation: ep-slide 1.6s ease-in-out infinite;
+}
+@keyframes ep-slide {
+  0%   { transform: translateX(-260%); }
+  100% { transform: translateX(380%); }
+}
+
+/* 等待人工操作時（script_ready / upload_ready）：琥珀色 Hero */
+.ep-progress-hero.waiting {
+  background: linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.03) 100%);
+  border-color: rgba(245,158,11,0.45);
+}
+.ep-progress-hero.waiting::before {
+  background: linear-gradient(90deg, transparent 0%, #fbbf24 50%, transparent 100%);
+  animation: none; left: 0; right: 0;
+}
+.ep-progress-hero.waiting .ep-progress-hero-label { color: #fbbf24; }
+.ep-progress-hero.waiting .ep-progress-hero-bar-inner { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.ep-progress-hero.waiting .ep-progress-hero-icon { animation: none; }
+
+/* 錯誤時：紅色 Hero */
+.ep-progress-hero.error {
+  background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.03) 100%);
+  border-color: rgba(239,68,68,0.45);
+}
+.ep-progress-hero.error::before { animation: none; }
+.ep-progress-hero.error .ep-progress-hero-label { color: #f87171; }
+.ep-progress-hero.error .ep-progress-hero-bar-inner { background: #ef4444; animation: none; width: 100%; }
+
+/* 完成時：綠色 Hero */
+.ep-progress-hero.done {
+  background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.02) 100%);
+  border-color: rgba(34,197,94,0.35);
+}
+.ep-progress-hero.done::before { animation: none; }
+.ep-progress-hero.done .ep-progress-hero-label { color: #4ade80; }
+.ep-progress-hero.done .ep-progress-hero-bar-inner { background: #22c55e; animation: none; width: 100%; }
+
+/* ── 腳本 Tab 生成進度時間軸 ── */
+.script-timeline { list-style: none; padding: 8px 4px; margin: 0; }
+.timeline-step {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 8px;
+  transition: background .2s;
+}
+.timeline-step + .timeline-step { border-top: 1px dashed var(--border); }
+.timeline-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+  border: 1.5px solid var(--border); background: var(--surface2, #1a1a1f);
+  color: var(--text3, #71717a); flex-shrink: 0;
+}
+.timeline-label {
+  font-size: 13.5px; font-weight: 600; color: var(--text2, #d4d4d8); flex: 0 0 auto;
+}
+.timeline-sub {
+  font-size: 12px; color: var(--text3, #71717a);
+  font-variant-numeric: tabular-nums; margin-left: auto;
+}
+.timeline-step.done .timeline-dot { border-color: #22c55e; background: rgba(34,197,94,0.18); color: #22c55e; }
+.timeline-step.done .timeline-label { color: #22c55e; }
+.timeline-step.cur {
+  background: rgba(139,92,246,0.08);
+}
+.timeline-step.cur .timeline-dot {
+  border-color: #8b5cf6; background: rgba(139,92,246,0.22); color: #a78bfa;
+  animation: ep-pulse 2s ease-in-out infinite;
+}
+.timeline-step.cur .timeline-label { color: #a78bfa; font-weight: 800; }
+.timeline-step.cur .timeline-sub { color: #a78bfa; font-weight: 700; }
+
+/* ── 腳本 Tab B-roll 預覽 ── */
+.broll-sections { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+.broll-section {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2, #1a1a1f);
+}
+.broll-section-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.broll-sec-idx {
+  font-weight: 800; color: var(--accent2, #8b5cf6);
+  min-width: 50px; font-size: 13px;
+}
+.broll-sec-chip {
+  display: inline-block; padding: 2px 8px;
+  background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.35);
+  border-radius: 10px; font-size: 11px; color: #a78bfa;
+}
+.broll-sec-warn {
+  display: inline-block; padding: 2px 10px;
+  background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.45);
+  border-radius: 10px; font-size: 11.5px; color: #fbbf24; font-weight: 700;
+}
+.broll-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.broll-thumb {
+  position: relative; width: 152px; height: 86px; overflow: hidden;
+  border-radius: 6px; cursor: pointer; border: 1px solid var(--border);
+  background: #0f0f12;
+}
+.broll-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.broll-thumb:hover { border-color: var(--accent2, #8b5cf6); }
+.broll-thumb-meta {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.85), transparent);
+  color: #fff; font-size: 10.5px; padding: 16px 6px 4px; line-height: 1.3;
+}
+.broll-thumb-play {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px; color: #fff; opacity: .8;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+.broll-dialog { padding: 0; background: #000; border: 1px solid var(--border); border-radius: 12px; max-width: 90vw; }
+.broll-dialog video { display: block; max-width: 80vw; max-height: 70vh; }
+.broll-dialog::backdrop { background: rgba(0,0,0,0.7); }
+.broll-dialog-close {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(0,0,0,0.6); color: #fff; border: none;
+  width: 32px; height: 32px; border-radius: 50%;
+  cursor: pointer; font-size: 18px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>{{ episode.title or slug }}</h1>
+    <span class="sub">{{ slug }}</span>
+  </div>
+  <div class="topbar-actions">
+    <a href="/episodes" class="btn btn-ghost">← 所有集數</a>
+    <a href="/" class="btn btn-ghost">🏠 儀表板</a>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── Stage Stepper（10 階段流水線）── -->
+  {% set _stages = [
+    ('selected',     '🎯', '選題'),
+    ('researching',  '🔎', '研究'),
+    ('scripting',    '✍️', '腳本'),
+    ('script_ready', '📝', '審閱'),
+    ('tts',          '🎙️', '配音'),
+    ('prefetch',     '📥', '預抓'),
+    ('compositing',  '🎬', '合成'),
+    ('upload_ready', '📦', '待傳'),
+    ('uploading',    '📤', '上傳'),
+    ('done',         '✅', '完成'),
+  ] %}
+  {% set _stage_order = ['selected','researching','scripting','script_ready','tts','prefetch','compositing','upload_ready','uploading','done'] %}
+  {# 舊 stage "images" 當作 "prefetch" 顯示（不修改 status 本身，只 alias 變數）#}
+  {% set _display_stage = 'prefetch' if status.stage == 'images' else status.stage %}
+  {% set _cur_idx = _stage_order.index(_display_stage) if _display_stage in _stage_order else -1 %}
+  {% set _waiting = _display_stage in ('script_ready', 'upload_ready') %}
+  <div class="ep-stepper">
+    {% for key, icon, label in _stages %}
+      {% set _i = loop.index0 %}
+      {% set _is_cur = (key == _display_stage) %}
+      {% set _is_done = (_cur_idx > _i) or (status.stage == 'done' and key == 'done') %}
+      {% set _is_err = _is_cur and status.error_msg %}
+      {% set _is_wait = _is_cur and _waiting %}
+      <div class="ep-step
+        {% if _is_done %}ep-step-done{% endif %}
+        {% if _is_err %}ep-step-err{% elif _is_wait %}ep-step-wait{% elif _is_cur %}ep-step-cur{% endif %}">
+        <div class="ep-step-dot">{% if _is_done %}✓{% elif _is_err %}⚠{% else %}{{ icon }}{% endif %}</div>
+        <div class="ep-step-label">{{ label }}</div>
+      </div>
+      {% if not loop.last %}<div class="ep-step-line{% if _cur_idx > _i %} done{% endif %}"></div>{% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- ── 需要審閱腳本：大紅行動按鈕 ── -->
+  {% if status.stage == 'script_ready' and paths.script.exists %}
+  <div class="ep-action-urgent">
+    <div class="ep-action-urgent-msg">
+      <span class="ep-action-urgent-icon">⏳</span>
+      <div>
+        <div class="ep-action-urgent-title">腳本已就緒，等您審閱</div>
+        <div class="ep-action-urgent-sub">審閱通過後流水線會自動繼續（配音 → 圖片 → 合成 → 待上傳）</div>
+      </div>
+    </div>
+    <a href="/script?slug={{ slug }}" class="btn btn-primary btn-xl">📝 審閱腳本 →</a>
+  </div>
+  {% endif %}
+
+  <!-- ── 需要確認上傳：大黃行動按鈕 ── -->
+  {% if status.stage == 'upload_ready' and paths.video.exists and not episode.youtube_id %}
+  <div class="ep-action-urgent">
+    <div class="ep-action-urgent-msg">
+      <span class="ep-action-urgent-icon">📦</span>
+      <div>
+        <div class="ep-action-urgent-title">影片已合成，等您確認上傳</div>
+        <div class="ep-action-urgent-sub">請先在下方「影片」tab 預覽，確認無誤再按上傳</div>
+      </div>
+    </div>
+    <a href="#" onclick="document.querySelector('[data-ep-tab=video]').click();return false;" class="btn btn-primary btn-xl">▶ 前往預覽與上傳</a>
+  </div>
+  {% endif %}
+
+  <!-- ── 大型進度 Hero（取代小字進度列）── -->
+  {% set _active_stages = ['researching','scripting','tts','prefetch','images','compositing','uploading'] %}
+  {% set _waiting_stages = ['script_ready','upload_ready'] %}
+  {% set _hero_icons  = {'selected':'🎯','researching':'🔎','scripting':'✍️','script_ready':'⏳','tts':'🎙️','prefetch':'📥','images':'📥','compositing':'🎬','upload_ready':'📦','uploading':'📤','done':'✅'} %}
+  {% set _hero_labels = {'selected':'已選題，等待啟動','researching':'深度研究中','scripting':'腳本生成中','script_ready':'等待您審閱腳本','tts':'配音生成中','prefetch':'預抓 B-roll 與縮圖中','images':'預抓 B-roll 與縮圖中','compositing':'影片合成中','upload_ready':'等待您確認上傳','uploading':'上傳 YouTube 中','done':'製作完成'} %}
+
+  {% if status.error_msg %}
+    {# ── 錯誤分類：從 error_msg 關鍵字歸因 ── #}
+    {% set _err = status.error_msg %}
+    {% set _err_lower = _err|lower %}
+    {% if 'timed out' in _err_lower or 'timeout' in _err_lower %}
+      {% set _err_kind = 'timeout' %}
+      {% set _err_title = '⏱ Claude CLI 超時' %}
+      {% set _err_why = '呼叫 claude CLI 600–900 秒內未回應。可能是：(1) prompt 太長讓 Claude 思考過久；(2) 本機 Windows stdin 傳遞卡住；(3) 網路不穩。' %}
+      {% set _err_suggest = '先點「↺ 清除錯誤並重試」— 已修正 stdin 傳遞方式。若仍失敗，改用 CoWork 手動腳本。' %}
+    {% elif 'json' in _err_lower or '解析' in _err %}
+      {% set _err_kind = 'parse' %}
+      {% set _err_title = '📄 Claude 回傳內容解析失敗' %}
+      {% set _err_why = 'Claude 有回應但內容不是合法 JSON（可能多了說明文字或 markdown 包裝）。' %}
+      {% set _err_suggest = '直接重試通常會成功；若連續失敗請用 CoWork。' %}
+    {% elif 'returncode' in _err_lower or 'non-zero' in _err_lower or 'code=' in _err_lower %}
+      {% set _err_kind = 'exit' %}
+      {% set _err_title = '❌ Claude CLI 回傳錯誤' %}
+      {% set _err_why = 'claude CLI 進程以非零 exit code 結束，通常是未登入 / API 配額 / token 用完。' %}
+      {% set _err_suggest = '先在終端機跑一次 `claude -p "hello"` 確認登入狀態，再回來重試。' %}
+    {% elif '檔案' in _err or 'not found' in _err_lower or 'no such' in _err_lower %}
+      {% set _err_kind = 'file' %}
+      {% set _err_title = '📁 檔案遺失' %}
+      {% set _err_why = '找不到預期的輸入檔（research.json 或 script.json）。' %}
+      {% set _err_suggest = '回上一階段重做（如重做研究），讓檔案重新生成。' %}
+    {% else %}
+      {% set _err_kind = 'other' %}
+      {% set _err_title = '⚠️ 自動流程失敗' %}
+      {% set _err_why = '' %}
+      {% set _err_suggest = '可直接重試，或切換到 CoWork 手動處理這一步。' %}
+    {% endif %}
+  <div class="ep-progress-hero error">
+    <div class="ep-progress-hero-icon">⚠️</div>
+    <div class="ep-progress-hero-body">
+      <div class="ep-progress-hero-label">{{ _err_title }} · 階段：{{ status.stage }}</div>
+      <div class="ep-progress-hero-detail" id="progress-detail">{{ _err_why or (_err[:200]) }}</div>
+      {% if _err_suggest %}
+      <div style="font-size:13px;color:var(--text2,#d4d4d8);margin-top:6px;line-height:1.55">
+        💡 <strong>建議：</strong>{{ _err_suggest }}
+      </div>
+      {% endif %}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="retryEpisode()">↺ 清除錯誤並重試</button>
+        {% if status.stage == 'scripting' %}
+        <a href="/cowork/script?slug={{ slug }}" class="btn btn-ghost btn-sm">✍️ 改用 CoWork 手動腳本</a>
+        {% elif status.stage == 'researching' %}
+        <a href="/cowork/research?slug={{ slug }}" class="btn btn-ghost btn-sm">🔍 改用 CoWork 手動研究</a>
+        {% endif %}
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('err-raw').hidden=!document.getElementById('err-raw').hidden">🔧 顯示原始錯誤</button>
+      </div>
+      <pre id="err-raw" hidden style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:11px;color:var(--text3);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow:auto">{{ _err }}</pre>
+    </div>
+  </div>
+  {% elif status.stage == 'done' %}
+  <div class="ep-progress-hero done">
+    <div class="ep-progress-hero-icon">✅</div>
+    <div class="ep-progress-hero-body">
+      <div class="ep-progress-hero-label">製作完成</div>
+      <div class="ep-progress-hero-detail" id="progress-detail">{{ status.progress_detail or '影片已上傳至 YouTube' }}</div>
+      <div class="ep-progress-hero-bar"><div class="ep-progress-hero-bar-inner"></div></div>
+    </div>
+  </div>
+  {% elif status.stage in _waiting_stages %}
+  <div class="ep-progress-hero waiting">
+    <div class="ep-progress-hero-icon">{{ _hero_icons.get(status.stage, '⏳') }}</div>
+    <div class="ep-progress-hero-body">
+      <div class="ep-progress-hero-label">等待人工操作</div>
+      <div class="ep-progress-hero-detail" id="progress-detail">{{ _hero_labels.get(status.stage, status.stage) }}</div>
+      <div class="ep-progress-hero-bar"><div class="ep-progress-hero-bar-inner"></div></div>
+    </div>
+  </div>
+  {% elif status.stage in _active_stages %}
+  <div class="ep-progress-hero">
+    <div class="ep-progress-hero-icon">{{ _hero_icons.get(status.stage, '⏳') }}</div>
+    <div class="ep-progress-hero-body">
+      <div class="ep-progress-hero-label">{{ _hero_labels.get(status.stage, status.stage) }}</div>
+      <div class="ep-progress-hero-detail" id="progress-detail">{{ status.progress_detail or '準備中…' }}</div>
+      <div class="ep-progress-hero-bar"><div class="ep-progress-hero-bar-inner"></div></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="ep-progress-hero" style="display:none"><div class="ep-progress-hero-detail" id="progress-detail"></div></div>
+  {% endif %}
+
+  <!-- ── 頂部狀態條（簡化為輔助資訊）── -->
+  <div class="ep-statusbar {% if status.error_msg %}ep-statusbar-err{% endif %}">
+    <div class="ep-statusbar-main">
+      <span class="stage-badge stage-{{ status.stage }}">{{ status.stage }}</span>
+      {% if status.stage in _active_stages %}
+      <span class="spinner spinner-inline"></span>
+      {% endif %}
+      {% if status.updated_at %}
+      <span class="ep-statusbar-elapsed" data-updated="{{ status.updated_at }}">⏱ …</span>
+      {% endif %}
+      {% if episode.youtube_id %}
+      <a href="https://youtu.be/{{ episode.youtube_id }}" target="_blank" class="ep-link-yt">YouTube ↗</a>
+      {% endif %}
+    </div>
+    <div class="ep-statusbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="retryEpisode()">↺ 清除錯誤並重試</button>
+    </div>
+  </div>
+
+  <!-- ── Tab 導覽 ── -->
+  <div class="ep-tabs">
+    <button class="ep-tab active" data-ep-tab="overview">📋 概覽</button>
+    <button class="ep-tab" data-ep-tab="research">🔍 研究</button>
+    <button class="ep-tab" data-ep-tab="script">📝 腳本</button>
+    <button class="ep-tab" data-ep-tab="audio">🎙 配音</button>
+    <button class="ep-tab" data-ep-tab="images">🖼 圖片</button>
+    <button class="ep-tab" data-ep-tab="thumbnail">🎨 縮圖</button>
+    <button class="ep-tab" data-ep-tab="video">🎬 影片／上傳</button>
+  </div>
+
+  <!-- ── Panel: 概覽 ── -->
+  <div class="ep-panel active" data-ep-panel="overview">
+    <div class="meta-grid">
+      <div class="meta-box">
+        <div class="label">日期</div>
+        <div class="val">{{ episode.date or status.date or '—' }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="label">開始時間</div>
+        <div class="val val-mono-small">{{ status.created_at[:19] if status.created_at else '—' }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="label">最近更新</div>
+        <div class="val val-mono-small">{{ status.updated_at[:19] if status.updated_at else '—' }}</div>
+      </div>
+      <div class="meta-box">
+        <div class="label">YouTube</div>
+        <div class="val">
+          {% if episode.youtube_id %}
+          <a href="https://youtu.be/{{ episode.youtube_id }}" target="_blank" class="ep-link-yt">已上傳 ↗</a>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label section-label-spaced">檔案清單</div>
+    <table class="file-table">
+      <thead>
+        <tr><th style="width:140px">類型</th><th>路徑</th><th style="width:100px">狀態</th><th style="width:80px">大小</th><th style="width:130px">操作</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🔍 研究資料</td>
+          <td class="path">{{ paths.research.path }}</td>
+          <td class="{{ 'on' if paths.research.exists else 'off' }}">{{ '✓ 存在' if paths.research.exists else '— 未生成' }}</td>
+          <td>{{ (paths.research.size // 1024) if paths.research.exists else '' }} {{ 'KB' if paths.research.exists else '' }}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="retryStep('researching')">↺ 重做研究</button></td>
+        </tr>
+        <tr>
+          <td>📄 腳本 JSON</td>
+          <td class="path">{{ paths.script.path }}</td>
+          <td class="{{ 'on' if paths.script.exists else 'off' }}">{{ '✓ 存在' if paths.script.exists else '— 未生成' }}</td>
+          <td>{{ (paths.script.size // 1024) if paths.script.exists else '' }} {{ 'KB' if paths.script.exists else '' }}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="retryStep('scripting')">↺ 重做腳本</button></td>
+        </tr>
+        <tr>
+          <td>🎙 配音</td>
+          <td class="path">{{ paths.audio_full.path }}</td>
+          <td class="{{ 'on' if paths.audio_full.exists else 'off' }}">{{ '✓ 存在' if paths.audio_full.exists else '— 未生成' }}</td>
+          <td>{{ (paths.audio_full.size // 1024 // 1024) if paths.audio_full.exists else '' }} {{ 'MB' if paths.audio_full.exists else '' }}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="retryStep('tts')">↺ 重做配音</button></td>
+        </tr>
+        <tr>
+          <td>🖼 場景圖</td>
+          <td class="path">{{ paths.images_dir.path }}</td>
+          <td class="{{ 'on' if paths.section_images else 'off' }}">{{ '✓ ' ~ paths.section_images|length ~ ' 張' if paths.section_images else '— 未生成' }}</td>
+          <td>—</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="retryStep('images')">↺ 重做圖片</button></td>
+        </tr>
+        <tr>
+          <td>🎨 縮圖</td>
+          <td class="path">{{ paths.thumbnail.path }}</td>
+          <td class="{{ 'on' if paths.thumbnail.exists else 'off' }}">{{ '✓ 存在' if paths.thumbnail.exists else '— 未生成' }}</td>
+          <td>{{ (paths.thumbnail.size // 1024) if paths.thumbnail.exists else '' }} {{ 'KB' if paths.thumbnail.exists else '' }}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="retryStep('images')">↺ 重做圖片</button></td>
+        </tr>
+        <tr>
+          <td>💬 字幕 ASS</td>
+          <td class="path">{{ paths.subtitle_ass.path }}</td>
+          <td class="{{ 'on' if paths.subtitle_ass.exists else 'off' }}">{{ '✓ 存在' if paths.subtitle_ass.exists else '— 未生成' }}</td>
+          <td>{{ (paths.subtitle_ass.size // 1024) if paths.subtitle_ass.exists else '' }} {{ 'KB' if paths.subtitle_ass.exists else '' }}</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>🎬 最終影片</td>
+          <td class="path">{{ paths.video.path }}</td>
+          <td class="{{ 'on' if paths.video.exists else 'off' }}">{{ '✓ 存在' if paths.video.exists else '— 未生成' }}</td>
+          <td>{{ (paths.video.size // 1024 // 1024) if paths.video.exists else '' }} {{ 'MB' if paths.video.exists else '' }}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="retryStep('compositing')">↺ 重合成</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Panel: 研究 ── -->
+  <div class="ep-panel" data-ep-panel="research">
+    {% if paths.research.exists %}
+    <div class="card">
+      <div class="section-label">研究摘要</div>
+      <div id="research-content" class="research-content">載入中…</div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>尚未生成研究資料</p>
+      <p class="muted">pipeline 會在選題後自動跑研究；若卡住可點「↺ 重做研究」</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Panel: 腳本 ── -->
+  <div class="ep-panel" data-ep-panel="script">
+    {# ── 生成進度時間軸（僅在 scripting 相關階段顯示）── #}
+    {% if status.stage in ['selected', 'researching', 'scripting'] and not status.error_msg %}
+    <div class="card" id="script-timeline-card" style="margin-bottom:14px">
+      <div class="section-label">⏱ 生成進度時間軸</div>
+      <ol class="script-timeline" id="script-timeline">
+        <li data-step="research" class="timeline-step"><span class="timeline-dot">○</span><span class="timeline-label">深度研究</span><span class="timeline-sub"></span></li>
+        <li data-step="cli" class="timeline-step"><span class="timeline-dot">○</span><span class="timeline-label">呼叫 Claude CLI 生成腳本</span><span class="timeline-sub"></span></li>
+        <li data-step="parse" class="timeline-step"><span class="timeline-dot">○</span><span class="timeline-label">解析 JSON 與存檔</span><span class="timeline-sub"></span></li>
+        <li data-step="ready" class="timeline-step"><span class="timeline-dot">○</span><span class="timeline-label">腳本就緒</span><span class="timeline-sub"></span></li>
+      </ol>
+    </div>
+    {% endif %}
+
+    {% if paths.script.exists %}
+    <div class="banner banner-info" style="margin-bottom:12px">
+      完整腳本審閱（章節切分、就地編輯、AI 一鍵審閱、標題/標籤/描述編輯）請用專屬頁面：
+      <a href="/script?slug={{ slug }}" class="btn btn-primary btn-sm" style="margin-left:8px">🔗 打開腳本審閱</a>
+    </div>
+    <div class="card">
+      <div class="section-label">腳本總覽</div>
+      <div id="script-overview" class="research-content">載入中…</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="section-label">🎞 每段 B-roll 素材預覽</div>
+      <div id="broll-sections" class="broll-sections">載入中…</div>
+    </div>
+    {% elif status.stage not in ['selected', 'researching', 'scripting'] %}
+    <div class="empty-state">
+      <p>尚未生成腳本</p>
+      <p class="muted">研究完成後 pipeline 會自動跑腳本生成；或點「↺ 重做腳本」</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Panel: 配音 ── -->
+  <div class="ep-panel" data-ep-panel="audio">
+    {% if paths.audio_full.exists %}
+    <div class="card">
+      <div class="section-label">完整配音（audio_full.wav）</div>
+      <audio controls class="audio-player" src="/episode/{{ slug }}/audio"></audio>
+      <div class="muted" style="margin-top:8px">檔案大小：{{ paths.audio_full.size // 1024 // 1024 }} MB</div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="retryStep('tts')">↺ 重做配音</button>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>尚未生成配音</p>
+      <p class="muted">腳本批准後 pipeline 會自動跑 TTS</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Panel: 場景圖 ── -->
+  <div class="ep-panel" data-ep-panel="images">
+    {% if paths.section_images %}
+    <div class="ep-action-bar">
+      <span class="muted">共 {{ paths.section_images|length }} 張場景圖</span>
+      <button class="btn btn-ghost btn-sm" onclick="retryStep('images')">↺ 重做所有圖片</button>
+    </div>
+    <div class="img-grid">
+      {% for img in paths.section_images %}
+      <div class="img-grid-item">
+        <img src="/episode/{{ slug }}/image/{{ loop.index0 }}" alt="section {{ loop.index }}" loading="lazy">
+        <div class="img-grid-caption">段 {{ loop.index }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>尚未生成場景圖</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Panel: 縮圖 ── -->
+  <div class="ep-panel" data-ep-panel="thumbnail">
+    {% if paths.thumbnail.exists %}
+    <div class="card">
+      <div class="section-label">縮圖預覽</div>
+      <img src="/episode/{{ slug }}/thumbnail" alt="thumbnail" class="thumbnail-preview">
+      <div class="muted" style="margin-top:8px">路徑：{{ paths.thumbnail.path }}</div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="retryStep('images')">↺ 重新生成縮圖</button>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>尚未生成縮圖</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Panel: 影片／上傳 ── -->
+  <div class="ep-panel" data-ep-panel="video">
+    {% if paths.video.exists %}
+    <div class="card">
+      <div class="section-label">最終影片</div>
+      <video controls class="video-preview-player">
+        <source src="/episode/{{ slug }}/video" type="video/mp4">
+      </video>
+      <div class="muted" style="margin-top:8px">大小：{{ paths.video.size // 1024 // 1024 }} MB</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        {% if status.stage == 'upload_ready' and not episode.youtube_id %}
+        <button onclick="confirmUpload()" id="btn-upload" class="btn btn-primary btn-sm">
+          📤 確認上傳 YouTube
+        </button>
+        {% endif %}
+        <a href="/episode/{{ slug }}/video" target="_blank" class="btn btn-ghost btn-sm">⬇ 另開視窗</a>
+        <button class="btn btn-ghost btn-sm" onclick="retryStep('compositing')">↺ 重合成</button>
+        {% if status.stage == 'upload_ready' or status.stage == 'uploading' %}
+        <button class="btn btn-ghost btn-sm" onclick="retryStep('uploading')">↺ 重新上傳</button>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>尚未生成最終影片</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── B-roll 預覽對話框 ── -->
+  <dialog class="broll-dialog" id="broll-dialog">
+    <button class="broll-dialog-close" onclick="document.getElementById('broll-dialog').close()">×</button>
+    <video id="broll-dialog-video" controls autoplay></video>
+  </dialog>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SLUG = {{ slug|tojson }};
+
+// ── Tab 切換 ──
+document.querySelectorAll('.ep-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    const target = t.dataset.epTab;
+    document.querySelectorAll('.ep-tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.ep-panel').forEach(p =>
+      p.classList.toggle('active', p.dataset.epPanel === target)
+    );
+    if (target === 'research' && !window._researchLoaded) loadResearch();
+    if (target === 'script' && !window._scriptLoaded) { loadScriptOverview(); loadBrollPreview(); }
+  });
+});
+
+// ── 已等多久 ──
+function fmtElapsed(iso) {
+  try {
+    const t = new Date(iso + (iso.includes('Z') || iso.includes('+') ? '' : 'Z'));
+    const d = Date.now() - t.getTime();
+    if (d < 60000) return '剛剛';
+    const m = Math.floor(d / 60000);
+    if (m < 60) return m + ' 分';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + ' 時 ' + (m % 60) + ' 分';
+    return Math.floor(h / 24) + ' 天';
+  } catch { return '—'; }
+}
+function refreshElapsed() {
+  document.querySelectorAll('[data-updated]').forEach(el => {
+    el.textContent = '⏱ ' + fmtElapsed(el.dataset.updated);
+  });
+}
+refreshElapsed();
+setInterval(refreshElapsed, 30000);
+
+// ── 研究/腳本 lazy load ──
+async function loadResearch() {
+  const el = document.getElementById('research-content');
+  if (!el) return;
+  try {
+    const r = await fetch('/episode/' + encodeURIComponent(SLUG) + '/research.json');
+    if (!r.ok) { el.textContent = '載入失敗'; return; }
+    const d = await r.json();
+    el.innerHTML = `
+      <div class="info-row"><div class="info-label">主題</div><div class="info-val">${escapeHtml(d.title || '')}</div></div>
+      <div class="info-row"><div class="info-label">來源</div><div class="info-val">${escapeHtml(d.source || '')}</div></div>
+      <div class="info-row"><div class="info-label">商業意義</div><div class="info-val">${escapeHtml(d.business_angle || '')}</div></div>
+      <div class="info-row"><div class="info-label">台灣觀眾關注</div><div class="info-val">${escapeHtml(d.why_audience_cares || '')}</div></div>
+      <div class="info-row"><div class="info-label">研究摘要</div><div class="info-val" style="white-space:pre-wrap">${escapeHtml(d.research_text || '')}</div></div>
+    `;
+    window._researchLoaded = true;
+  } catch (e) { el.textContent = '載入失敗：' + e; }
+}
+async function loadScriptOverview() {
+  const el = document.getElementById('script-overview');
+  if (!el) return;
+  try {
+    const r = await fetch('/episode/' + encodeURIComponent(SLUG) + '/script.json');
+    if (!r.ok) { el.textContent = '載入失敗'; return; }
+    const d = await r.json();
+    const titles = (d.title_options || []).map(t => `<li>${escapeHtml(t)}</li>`).join('');
+    const nSec = (d.script_sections || []).length;
+    const totalDur = (d.script_sections || []).reduce((s, x) => s + (x.duration_seconds || 0), 0);
+    const mm = Math.floor(totalDur / 60), ss = totalDur % 60;
+    el.innerHTML = `
+      <div class="info-row"><div class="info-label">標題選項</div><ul style="padding-left:20px;font-size:13px">${titles}</ul></div>
+      <div class="info-row"><div class="info-label">長度</div><div class="info-val">${nSec} 段 · ${mm} 分 ${ss} 秒</div></div>
+      <div class="info-row"><div class="info-label">縮圖概念</div><div class="info-val">${escapeHtml(d.thumbnail_concept || '')}</div></div>
+      <div class="info-row"><div class="info-label">標籤</div><div class="info-val">${(d.tags || []).slice(0, 15).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div></div>
+    `;
+    window._scriptLoaded = true;
+  } catch (e) { el.textContent = '載入失敗：' + e; }
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── 載入每段 B-roll 預覽 ──
+async function loadBrollPreview() {
+  const el = document.getElementById('broll-sections');
+  if (!el || window._brollLoaded) return;
+  try {
+    const [rScript, rManifest] = await Promise.all([
+      fetch('/episode/' + encodeURIComponent(SLUG) + '/script.json'),
+      fetch('/episode/' + encodeURIComponent(SLUG) + '/broll-manifest'),
+    ]);
+    if (!rScript.ok) { el.innerHTML = '<p class="muted">尚無腳本</p>'; return; }
+    const script = await rScript.json();
+    const manifest = rManifest.ok ? await rManifest.json() : { sections: {}, available: false };
+    const sections = script.script_sections || [];
+    if (!manifest.pexels_available && Object.keys(manifest.sections || {}).length === 0) {
+      el.innerHTML = '<p class="muted">尚未執行 prefetch 階段。完成配音後系統會自動預抓 Pexels B-roll；或設定 PEXELS_API_KEY 後重做「預抓」步驟。</p>';
+      return;
+    }
+    const html = sections.map(sec => {
+      const sid = sec.section_id;
+      const keywords = sec.broll_keywords || (sec.broll_keyword ? [sec.broll_keyword] : []);
+      const clips = (manifest.sections || {})[String(sid)] || [];
+      const kwHtml = keywords.map(k => `<span class="broll-sec-chip">${escapeHtml(k)}</span>`).join('');
+      const warn = clips.length === 0
+        ? `<span class="broll-sec-warn">⚠️ 無命中，將用 AI 生圖 fallback</span>`
+        : '';
+      const thumbs = clips.map((c, i) => {
+        const thumb = c.thumb || '';
+        const dur = c.duration_sec || 0;
+        const kw = c.keyword || '';
+        return `<div class="broll-thumb" onclick="openBroll(${sid}, ${i})">
+          ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy">` : ''}
+          <div class="broll-thumb-play">▶</div>
+          <div class="broll-thumb-meta">${escapeHtml(kw)} · ${Math.round(dur)}s</div>
+        </div>`;
+      }).join('');
+      return `<div class="broll-section">
+        <div class="broll-section-head">
+          <span class="broll-sec-idx">段 ${sid}</span>
+          ${kwHtml}
+          ${warn}
+        </div>
+        <div class="broll-thumbs">${thumbs || '<span class="muted">（尚無素材）</span>'}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = html || '<p class="muted">腳本無段落。</p>';
+    window._brollLoaded = true;
+  } catch (e) {
+    el.innerHTML = '<p class="muted">載入失敗：' + escapeHtml(String(e)) + '</p>';
+  }
+}
+
+function openBroll(sectionId, idx) {
+  const dlg = document.getElementById('broll-dialog');
+  const video = document.getElementById('broll-dialog-video');
+  video.src = '/episode/' + encodeURIComponent(SLUG) + '/broll/' + sectionId + '/' + idx;
+  video.load();
+  dlg.showModal();
+  dlg.addEventListener('close', () => { video.pause(); video.removeAttribute('src'); video.load(); }, { once: true });
+}
+
+// ── SSE 即時進度 ──
+const evtSrc = new EventSource('/api/sse/status?slug=' + encodeURIComponent(SLUG));
+const _initStage = "{{ status.stage }}";
+const _initErr   = {{ 'true' if status.error_msg else 'false' }};
+// ── 腳本 Tab 生成進度時間軸 ──
+// 依 stage + progress_detail 對應到四步：research → cli → parse → ready
+function updateScriptTimeline(stage, detail) {
+  const card = document.getElementById('script-timeline-card');
+  if (!card) return;
+  const steps = {
+    research: card.querySelector('[data-step="research"]'),
+    cli:      card.querySelector('[data-step="cli"]'),
+    parse:    card.querySelector('[data-step="parse"]'),
+    ready:    card.querySelector('[data-step="ready"]'),
+  };
+  // 預設全部未開始
+  Object.values(steps).forEach(el => {
+    if (!el) return;
+    el.classList.remove('done', 'cur');
+    el.querySelector('.timeline-dot').textContent = '○';
+    el.querySelector('.timeline-sub').textContent = '';
+  });
+  const setDone = (k, sub) => {
+    if (!steps[k]) return;
+    steps[k].classList.add('done');
+    steps[k].querySelector('.timeline-dot').textContent = '✓';
+    if (sub) steps[k].querySelector('.timeline-sub').textContent = sub;
+  };
+  const setCur = (k, sub) => {
+    if (!steps[k]) return;
+    steps[k].classList.add('cur');
+    steps[k].querySelector('.timeline-dot').textContent = '⏳';
+    if (sub) steps[k].querySelector('.timeline-sub').textContent = sub;
+  };
+  const d = detail || '';
+  if (stage === 'researching') {
+    setCur('research', d);
+  } else if (stage === 'scripting') {
+    setDone('research');
+    // progress_detail 例：「✍️ 呼叫 claude CLI…」或「Claude 生成腳本中｜已等候 183s / 900s」或「已收到 claude 輸出」或「✅ 腳本已存」
+    if (/已存|存檔|out_path/i.test(d)) {
+      setDone('cli'); setDone('parse');
+    } else if (/解析 JSON|已收到 claude 輸出/i.test(d)) {
+      setDone('cli'); setCur('parse', d);
+    } else {
+      setCur('cli', d);
+    }
+  } else if (stage === 'script_ready' || stage === 'tts' || stage === 'prefetch'
+             || stage === 'images' || stage === 'compositing' || stage === 'upload_ready'
+             || stage === 'uploading' || stage === 'done') {
+    setDone('research'); setDone('cli'); setDone('parse'); setDone('ready');
+  }
+}
+// 初次渲染（用頁面 SSR 的 stage + progress_detail）
+updateScriptTimeline(_initStage, {{ (status.progress_detail or '')|tojson }});
+
+evtSrc.onmessage = (e) => {
+  const d = JSON.parse(e.data);
+  if (!d.stage) return;
+  // 即時更新 progress_detail 文字
+  const detail = document.getElementById('progress-detail');
+  if (detail && d.progress_detail) {
+    detail.textContent = d.progress_detail;
+    const hero = detail.closest('.ep-progress-hero');
+    if (hero) hero.style.display = '';
+  }
+  // 時間軸即時同步
+  updateScriptTimeline(d.stage, d.progress_detail);
+  // stage 變化 OR error_msg 從無到有/消失 → reload
+  const errChanged = !!d.error_msg !== _initErr;
+  if (d.stage !== _initStage || errChanged) { location.reload(); }
+};
+evtSrc.onerror = () => setTimeout(() => location.reload(), 30000);
+
+// ── 操作 ──
+async function retryEpisode() {
+  if (!confirm('清除錯誤並從目前階段重試？')) return;
+  const res = await fetch('/episode/' + encodeURIComponent(SLUG) + '/retry', { method: 'POST' });
+  const d = await res.json();
+  if (d.ok) location.reload();
+  else alert('重試失敗：' + (d.error || ''));
+}
+async function retryStep(stage) {
+  const labels = {researching:'研究', scripting:'腳本', tts:'配音', images:'圖片', compositing:'合成', uploading:'上傳'};
+  if (!confirm(`要重做「${labels[stage] || stage}」階段？會把 pipeline 拉回該階段重新執行。`)) return;
+  try {
+    const r = await fetch('/episode/' + encodeURIComponent(SLUG) + '/retry-step', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({stage}),
+    });
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else alert('失敗：' + (d.error || ''));
+  } catch (e) { alert('網路錯誤：' + e); }
+}
+async function confirmUpload() {
+  const btn = document.getElementById('btn-upload');
+  if (!confirm('上傳後將排程台灣時間 20:00 自動發布，此動作無法撤回。確定？')) return;
+  btn.disabled = true; btn.textContent = '⏳ 準備上傳…';
+  try {
+    const res = await fetch('/episode/' + encodeURIComponent(SLUG) + '/upload-confirm', { method: 'POST' });
+    const d = await res.json();
+    if (d.ok) { btn.textContent = '✅ 已送出'; setTimeout(()=>location.reload(), 1500); }
+    else { btn.disabled=false; btn.textContent='📤 確認上傳 YouTube'; alert('失敗：' + (d.error || '')); }
+  } catch (e) {
+    btn.disabled=false; btn.textContent='📤 確認上傳 YouTube';
+    alert('網路錯誤：' + e);
+  }
+}
+</script>
+{% endblock %}

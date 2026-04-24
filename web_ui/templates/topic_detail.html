@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ topic.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <header class="page-header">
+    <div class="breadcrumb muted">
+      <a href="/topics">🧩 主題瀏覽</a> / 主題詳情
+    </div>
+    <h1>{{ topic.title }}</h1>
+    <div class="topic-header-meta">
+      {% if topic.category %}<span class="badge badge-category-{{ topic.category }}">{{ topic.category }}</span>{% endif %}
+      <span class="badge badge-region-{{ topic.region }}">
+        {% if topic.region == "taiwan" %}🇹🇼 台灣{% elif topic.region == "global" %}🌐 全球{% else %}🌍 混合{% endif %}
+      </span>
+      <span class="badge badge-count">{{ topic.news_count }} 則新聞</span>
+      <span class="badge badge-score">★ {{ '%.1f'|format(topic.aggregate_score or 0) }}</span>
+      <span class="badge badge-status-{{ topic.status }}">{{ topic.status }}</span>
+    </div>
+    {% if topic.summary %}
+    <div class="topic-summary muted">{{ topic.summary }}</div>
+    {% endif %}
+  </header>
+
+  <!-- ── Actions ── -->
+  <section class="card">
+    <div class="topic-actions">
+      {% if topic.status == "open" %}
+      <form action="/select-topic" method="post" style="display:inline">
+        <input type="hidden" name="topic_id" value="{{ topic.id }}">
+        <button type="submit" class="btn-primary">🎬 從此主題製作集數</button>
+      </form>
+      {% endif %}
+      {% if episode %}
+      <a href="/episode/{{ episode.slug }}" class="btn-ghost">📺 查看對應集數</a>
+      {% endif %}
+      <span class="muted">
+        建立於 {{ topic.first_seen_date }}，最近更新 {{ topic.last_seen_date }}
+      </span>
+    </div>
+  </section>
+
+  <!-- ── 成員新聞 ── -->
+  <section class="card section">
+    <h2>📰 成員新聞（{{ news_rows|length }}）</h2>
+    {% if news_rows %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>標題</th>
+          <th>來源</th>
+          <th>地區</th>
+          <th>AI分數</th>
+          <th>發布日</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in news_rows %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>
+            <div class="news-title">
+              <a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.suggested_title or n.title }}</a>
+            </div>
+            {% if n.suggested_title and n.suggested_title != n.title %}
+            <div class="muted news-orig">原：{{ n.title }}</div>
+            {% endif %}
+          </td>
+          <td>{{ n.source_name }}</td>
+          <td>
+            {% if n.region == "taiwan" %}🇹🇼{% else %}🌐{% endif %}
+          </td>
+          <td>{{ '%.1f'|format(n.ai_score or 0) }}</td>
+          <td class="muted">{{ (n.published_at or '')[:10] }}</td>
+          <td>
+            <a href="{{ n.url }}" target="_blank" class="btn-ghost btn-sm">原文</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">此主題目前沒有成員新聞。</div>
+    {% endif %}
+  </section>
+
+  {% if topic.notes %}
+  <section class="card section">
+    <h2>📝 備註</h2>
+    <pre class="muted">{{ topic.notes }}</pre>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

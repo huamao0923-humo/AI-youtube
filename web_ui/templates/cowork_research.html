@@ -8,7 +8,8 @@
     <span class="sub">步驟 1／2 — 複製 Prompt → 貼給 Claude Code → 匯入結果</span>
   </div>
   <div class="topbar-actions">
-    <a href="/status" class="btn btn-ghost">← 製作進度</a>
+    <a href="/episodes" class="btn btn-ghost">← 返回集數進度</a>
+    <a href="/" class="btn btn-ghost">🏠 儀表板</a>
   </div>
 </div>
 
@@ -42,7 +43,8 @@
   <div class="card" style="padding:20px 24px">
     <div class="section-label" style="margin-bottom:12px">步驟二：匯入 Claude Code 的研究結果</div>
     <textarea id="research-text"
-      style="width:100%;height:280px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--text);font-family:inherit;resize:vertical;line-height:1.6"
+      class="input-area"
+      style="height:280px;line-height:1.6"
       placeholder="將 Claude Code 回傳的研究摘要貼在這裡（純文字，不需要 JSON 格式）…"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
       <button class="btn btn-success" onclick="submitResearch()">✅ 匯入研究結果，繼續生成腳本 Prompt</button>

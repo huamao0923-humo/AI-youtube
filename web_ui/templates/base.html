@@ -19,15 +19,18 @@
 
     <nav class="sidebar-nav">
       <div class="nav-group">
-        <div class="nav-group-label">每日流程</div>
-        <a href="/" class="nav-link {% if active == 'index' %}active{% endif %}">
-          <span class="nav-icon">📰</span>今日選題
+        <div class="nav-group-label">主流程</div>
+        <a href="/" class="nav-link {% if active == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">🏠</span>儀表板
+        </a>
+        <a href="/today" class="nav-link {% if active == 'index' %}active{% endif %}">
+          <span class="nav-icon">🎯</span>今日嚴選
           {% if stats and stats.unscored > 0 %}
           <span class="nav-badge">{{ stats.unscored }}</span>
           {% endif %}
         </a>
-        <a href="/status" class="nav-link {% if active == 'status' %}active{% endif %}">
-          <span class="nav-icon">🚀</span>製作進度
+        <a href="/episodes" class="nav-link {% if active == 'episodes' %}active{% endif %}">
+          <span class="nav-icon">🎬</span>製作集數
         </a>
         <a href="/script" class="nav-link {% if active == 'script' %}active{% endif %}">
           <span class="nav-icon">📝</span>腳本審閱
@@ -35,25 +38,37 @@
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">CoWork</div>
-        <a href="/cowork/research" class="nav-link {% if active == 'cowork_research' %}active{% endif %}">
-          <span class="nav-icon">🔍</span>深度研究
-        </a>
-        <a href="/cowork/script" class="nav-link {% if active == 'cowork_script' %}active{% endif %}">
-          <span class="nav-icon">✍️</span>腳本生成
-        </a>
-      </div>
-
-      <div class="nav-group">
-        <div class="nav-group-label">工具</div>
-        <a href="/scoring" class="nav-link {% if active == 'scoring' %}active{% endif %}">
-          <span class="nav-icon">🤖</span>評分管理
+        <div class="nav-group-label">新聞管理</div>
+        <a href="/news" class="nav-link {% if active == 'news' %}active{% endif %}">
+          <span class="nav-icon">📰</span>新聞工作台
           {% if stats and stats.unscored > 0 %}
           <span class="nav-badge">{{ stats.unscored }}</span>
           {% endif %}
         </a>
+        <a href="/scoring" class="nav-link nav-sublink {% if active == 'scoring' %}active{% endif %}">
+          <span class="nav-icon">①</span>評分
+          {% if stats and stats.unscored > 0 %}
+          <span class="nav-badge">{{ stats.unscored }}</span>
+          {% endif %}
+        </a>
+        <a href="/topics" class="nav-link nav-sublink {% if active == 'topics' %}active{% endif %}">
+          <span class="nav-icon">②</span>聚類
+          {% if stats and stats.open_topics %}
+          <span class="nav-badge">{{ stats.open_topics }}</span>
+          {% endif %}
+        </a>
+        <a href="/all-news" class="nav-link nav-sublink {% if active == 'all_news' %}active{% endif %}">
+          <span class="nav-icon">📡</span>新聞池
+        </a>
+        <a href="/news-dates" class="nav-link nav-sublink {% if active == 'news_dates' %}active{% endif %}">
+          <span class="nav-icon">🗂️</span>爬蟲日誌
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">分析與系統</div>
         <a href="/report" class="nav-link {% if active == 'report' %}active{% endif %}">
-          <span class="nav-icon">📊</span>週報分析
+          <span class="nav-icon">📊</span>週報
         </a>
         <a href="/logs" class="nav-link {% if active == 'logs' %}active{% endif %}">
           <span class="nav-icon">📋</span>系統日誌
@@ -61,17 +76,26 @@
         <a href="/setup" class="nav-link {% if active == 'setup' %}active{% endif %}">
           <span class="nav-icon">⚙️</span>系統設定
         </a>
+        <a href="/refresh" class="nav-link">
+          <span class="nav-icon">🔄</span>重新爬蟲
+        </a>
       </div>
 
-      <div class="nav-group">
-        <div class="nav-group-label">操作</div>
-        <a href="/refresh" class="nav-link">
-          <span class="nav-icon">↻</span>重新抓取
+      <details class="nav-group nav-group-cowork" {% if cowork_alert %}open{% endif %}>
+        <summary class="nav-group-label cowork-summary">
+          <span>{% if cowork_alert %}⚠️ {% endif %}CoWork 備援</span>
+          {% if cowork_alert %}<span class="cowork-badge">!</span>{% endif %}
+        </summary>
+        {% if cowork_alert and cowork_alert_msg %}
+        <div class="cowork-alert-msg">{{ cowork_alert_msg }}</div>
+        {% endif %}
+        <a href="/cowork/research" class="nav-link {% if active == 'cowork_research' %}active{% endif %}">
+          <span class="nav-icon">🔍</span>手動研究
         </a>
-        <a href="/logout" class="nav-link" style="color:var(--red)">
-          <span class="nav-icon">🚪</span>登出
+        <a href="/cowork/script" class="nav-link {% if active == 'cowork_script' %}active{% endif %}">
+          <span class="nav-icon">✍️</span>手動腳本
         </a>
-      </div>
+      </details>
     </nav>
 
     <div class="sidebar-footer">
@@ -97,6 +121,12 @@
         </div>
       </div>
       {% endif %}
+
+      <div class="sidebar-user">
+        <span class="user-avatar">👤</span>
+        <span class="user-email" title="{{ user_email or '' }}">{{ user_email or '未登入' }}</span>
+        <a href="/logout" class="user-logout" title="登出">🚪</a>
+      </div>
     </div>
   </aside>
 
@@ -106,6 +136,170 @@
   </main>
 
 </div>
+
+<!-- ── Toast / Flash 訊息 ── -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="toast-stack" id="toast-stack">
+    {% for category, message in messages %}
+      {%- set kind = {'error':'error','danger':'error','warn':'warn','warning':'warn','success':'success','info':'info','message':'info'}.get(category, 'info') -%}
+      {%- set icon = {'success':'✓','info':'ℹ','warn':'⚠','error':'✕'}[kind] -%}
+      <div class="toast toast-{{ kind }}">
+        <span class="toast-icon">{{ icon }}</span>
+        <div class="toast-body">{{ message }}</div>
+        <button class="toast-close" onclick="this.parentElement.classList.add('toast-out');setTimeout(()=>this.parentElement.remove(),250)">×</button>
+      </div>
+    {% endfor %}
+  </div>
+  <script>
+    document.querySelectorAll('#toast-stack .toast').forEach(function(t){
+      var lifetime = (t.classList.contains('toast-error') || t.classList.contains('toast-warn')) ? 10000 : 5000;
+      setTimeout(function(){
+        t.classList.add('toast-out');
+        setTimeout(function(){ t.remove(); }, 250);
+      }, lifetime);
+    });
+  </script>
+  {% endif %}
+{% endwith %}
+
+<!-- ── Confirm Modal（取代 window.confirm） ── -->
+<dialog class="confirm-modal" id="__confirm_modal__">
+  <div class="confirm-modal-header">
+    <span class="confirm-modal-icon" id="__confirm_modal_icon__">⚠️</span>
+    <span class="confirm-modal-title" id="__confirm_modal_title__">確認</span>
+  </div>
+  <div class="confirm-modal-body" id="__confirm_modal_body__"></div>
+  <div class="confirm-modal-actions">
+    <button type="button" class="btn btn-ghost btn-sm" id="__confirm_modal_cancel__">取消</button>
+    <button type="button" class="btn btn-primary btn-sm" id="__confirm_modal_ok__">確認</button>
+  </div>
+</dialog>
+<script>
+/**
+ * confirmModal —— 取代 window.confirm()，回 Promise<boolean>
+ *
+ * 用法：
+ *   if (await confirmModal({ title:'刪除草稿', body:'此動作無法復原', danger:true, confirmText:'確定刪除' })) {
+ *     // 執行刪除
+ *   }
+ *
+ * 行為：
+ *   - ESC 鍵 = 取消（回 false）
+ *   - 點 backdrop = 取消（回 false）— 避免誤觸
+ *   - 按 Enter = 觸發確認按鈕（確認按鈕拿到焦點）
+ *
+ * 參數（都有預設）：
+ *   title       header 文字
+ *   body        body HTML（請確保已 escape）
+ *   confirmText 確認按鈕文字
+ *   cancelText  取消按鈕文字
+ *   icon        header 圖示 emoji
+ *   danger      是否為危險操作（紅色樣式）
+ */
+function confirmModal({
+  title = '確認',
+  body = '',
+  confirmText = '確認',
+  cancelText = '取消',
+  icon = '⚠️',
+  danger = false,
+} = {}) {
+  return new Promise(function(resolve) {
+    var dlg = document.getElementById('__confirm_modal__');
+    var elIcon = document.getElementById('__confirm_modal_icon__');
+    var elTitle = document.getElementById('__confirm_modal_title__');
+    var elBody = document.getElementById('__confirm_modal_body__');
+    var btnOk = document.getElementById('__confirm_modal_ok__');
+    var btnCancel = document.getElementById('__confirm_modal_cancel__');
+    if (!dlg || typeof dlg.showModal !== 'function') {
+      // Fallback：瀏覽器不支援 <dialog>
+      resolve(window.confirm((title ? title + '\n\n' : '') + (body || '')));
+      return;
+    }
+
+    elIcon.textContent = icon;
+    elTitle.textContent = title;
+    elBody.innerHTML = body;
+    btnOk.textContent = confirmText;
+    btnCancel.textContent = cancelText;
+    dlg.classList.toggle('danger', !!danger);
+
+    var settled = false;
+    function done(value) {
+      if (settled) return;
+      settled = true;
+      btnOk.removeEventListener('click', onOk);
+      btnCancel.removeEventListener('click', onCancel);
+      dlg.removeEventListener('cancel', onEsc);
+      dlg.removeEventListener('click', onBackdrop);
+      try { dlg.close(); } catch(e){}
+      resolve(value);
+    }
+    function onOk() { done(true); }
+    function onCancel() { done(false); }
+    function onEsc(e) { e.preventDefault(); done(false); }
+    function onBackdrop(e) {
+      // 點在 dialog 本體之外（backdrop 區域）會觸發以 dlg 為 target 的 click
+      if (e.target === dlg) done(false);
+    }
+
+    btnOk.addEventListener('click', onOk);
+    btnCancel.addEventListener('click', onCancel);
+    dlg.addEventListener('cancel', onEsc);
+    dlg.addEventListener('click', onBackdrop);
+
+    dlg.showModal();
+    setTimeout(function(){ btnOk.focus(); }, 0);
+  });
+}
+
+// ── 自動掛載 data-confirm-* 的 form/button ──
+// 用法：在 <form> 或 <button> 上加 data-confirm-title / data-confirm-body /
+//       data-confirm-text / data-confirm-cancel / data-confirm-icon /
+//       data-confirm-danger="true" 即可自動攔截 submit/click 並彈出 confirmModal
+document.addEventListener('submit', async function(e) {
+  var form = e.target;
+  if (!form || !form.dataset || !form.dataset.confirmTitle) return;
+  if (form.dataset.__confirmed === '1') return;
+  e.preventDefault();
+  var ok = await confirmModal({
+    title: form.dataset.confirmTitle,
+    body: form.dataset.confirmBody || '',
+    confirmText: form.dataset.confirmText || '確認',
+    cancelText: form.dataset.confirmCancel || '取消',
+    icon: form.dataset.confirmIcon || '⚠️',
+    danger: form.dataset.confirmDanger === 'true',
+  });
+  if (ok) {
+    form.dataset.__confirmed = '1';
+    form.submit();
+  }
+}, true);
+
+document.addEventListener('click', async function(e) {
+  var btn = e.target.closest('[data-confirm-title]');
+  if (!btn || btn.tagName === 'FORM') return;
+  // form 上的 data-confirm-* 交給 submit handler 處理
+  if (btn.closest('form') && btn.closest('form').dataset.confirmTitle) return;
+  if (btn.dataset.__confirmed === '1') return;
+  e.preventDefault();
+  e.stopPropagation();
+  var ok = await confirmModal({
+    title: btn.dataset.confirmTitle,
+    body: btn.dataset.confirmBody || '',
+    confirmText: btn.dataset.confirmText || '確認',
+    cancelText: btn.dataset.confirmCancel || '取消',
+    icon: btn.dataset.confirmIcon || '⚠️',
+    danger: btn.dataset.confirmDanger === 'true',
+  });
+  if (ok) {
+    btn.dataset.__confirmed = '1';
+    btn.click();
+  }
+}, true);
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

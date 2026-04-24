@@ -270,3 +270,51 @@ business_funding:
     priority: 8
     scrape_method: "rss"
     filter_keywords: ["AI", "artificial intelligence"]
+
+# ============================================================
+# 台灣科技媒體（region=taiwan，獨立分類與篩選用）
+# ============================================================
+taiwan_tech_media:
+  - name: "iThome"
+    rss: "https://www.ithome.com.tw/rss"
+    priority: 9
+    scrape_method: "rss"
+    region: "taiwan"
+
+  - name: "數位時代 Business Next"
+    rss: "https://www.bnext.com.tw/rss"
+    priority: 9
+    scrape_method: "rss"
+    region: "taiwan"
+
+  - name: "科技新報 TechNews"
+    rss: "https://technews.tw/feed/"
+    priority: 9
+    scrape_method: "rss"
+    region: "taiwan"
+
+  - name: "INSIDE 硬塞的網路趨勢觀察"
+    rss: "https://www.inside.com.tw/feed"
+    priority: 8
+    scrape_method: "rss"
+    region: "taiwan"
+
+  - name: "聯合新聞網 AI"
+    rss: "https://udn.com/rssfeed/news/2/7225?ch=news"
+    priority: 7
+    scrape_method: "rss"
+    region: "taiwan"
+    filter_keywords: ["AI", "人工智慧", "晶片", "半導體"]
+
+  - name: "中央社科技"
+    rss: "https://feeds.feedburner.com/rsscna/technology"
+    priority: 7
+    scrape_method: "rss"
+    region: "taiwan"
+
+  - name: "經濟日報科技"
+    rss: "https://money.udn.com/rssfeed/news/1001/5612/11162?ch=money"
+    priority: 7
+    scrape_method: "rss"
+    region: "taiwan"
+    filter_keywords: ["AI", "人工智慧", "晶片", "半導體", "科技"]

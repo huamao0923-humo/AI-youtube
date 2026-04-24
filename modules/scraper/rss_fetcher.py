@@ -127,6 +127,7 @@ async def _fetch_feed(
             "title": title,
             "source_name": name,
             "source_priority": source.get("priority", 5),
+            "source_region": source.get("region"),  # 由 sources.yaml 指定，taiwan / global
             "published_at": published_iso,
             "summary": summary,
             "full_text": None,

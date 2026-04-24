@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}爬蟲日誌{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>🗂️ 爬蟲日誌</h1>
+    <span class="sub">按爬取日期列表｜<a href="/news" class="muted">← 新聞工作台</a></span>
+  </div>
+</div>
+
+<div class="content">
+  <div class="section-label">爬取記錄</div>
+
+  {% if not summary %}
+  <div class="banner banner-warn">資料庫中尚無新聞記錄。</div>
+  {% else %}
+  <table class="date-table">
+    <thead>
+      <tr>
+        <th>爬取日期</th>
+        <th>總筆數</th>
+        <th>候選</th>
+        <th>待評分</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in summary %}
+    <tr class="{% if loop.first %}row-today{% endif %}">
+      <td class="date-cell">
+        {{ row.date }}
+        {% if loop.first %}<span class="badge badge-fresh" style="margin-left:8px">最新</span>{% endif %}
+      </td>
+      <td>{{ row.total }}</td>
+      <td class="val-green">{{ row.candidates }}</td>
+      <td class="{% if row.unscored > 0 %}val-amber{% endif %}">{{ row.unscored }}</td>
+      <td class="actions-cell">
+        <a href="/?date={{ row.date }}" class="btn btn-ghost btn-sm">查看選題</a>
+        <a href="/refresh?date={{ row.date }}" class="btn btn-ghost btn-sm">重新整理</a>
+        {% if not loop.first %}
+        <form method="POST" action="/clear-date" style="display:inline"
+              data-confirm-title="刪除 {{ row.date }} 的新聞"
+              data-confirm-body="共 <strong>{{ row.total }}</strong> 則新聞將被永久刪除，此操作無法復原。"
+              data-confirm-icon="🗑️"
+              data-confirm-text="確定刪除"
+              data-confirm-danger="true">
+          <input type="hidden" name="date" value="{{ row.date }}">
+          <button type="submit" class="btn btn-danger btn-sm">清除</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

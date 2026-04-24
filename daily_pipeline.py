@@ -51,8 +51,15 @@ def step_score(dry_run: bool = False) -> dict:
 def step_brief() -> dict:
     logger.info("═══ 步驟 3：生成 Daily Brief ═══")
     from modules.brief.brief_generator import generate
+    from modules.brief.heat_calculator import refresh_all as refresh_heat
     brief = generate()
     logger.info(f"Brief 生成完成，候選 {len(brief['candidates'])} 則")
+    # 熱度指數刷新（worldmonitor 風格儀表板用）
+    try:
+        r = refresh_heat()
+        logger.info(f"熱度刷新：{r['topics_refreshed']} 主題、snapshot {r['snapshots_written']}")
+    except Exception as e:
+        logger.warning(f"熱度刷新失敗（不影響 brief）：{e}")
     logger.info("請開啟選題介面：http://localhost:5000")
     return brief
 

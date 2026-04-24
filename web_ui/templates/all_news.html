@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}所有新聞{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>所有新聞</h1>
+    <span class="sub">{{ date }}</span>
+  </div>
+  <div class="topbar-actions">
+    <select id="dateSelect" class="input-select input-sm">
+      <option value="">-- 選擇日期 --</option>
+      {% for d in dates %}
+      <option value="{{ d.date }}" {% if d.date == date %}selected{% endif %}>
+        {{ d.date }} ({{ d.total }} 則)
+      </option>
+      {% endfor %}
+    </select>
+    <button onclick="recommendBrief()" class="btn btn-primary" style="margin-left:12px">
+      💡 推薦到今日嚴選
+    </button>
+    <a href="/" class="btn btn-ghost">← 返回選題</a>
+  </div>
+</div>
+
+<div class="content">
+
+  {% if not grouped or not grouped | length %}
+  <div class="card" style="text-align:center;padding:40px 20px;color:var(--text3)">
+    <p>此日期無新聞資料</p>
+  </div>
+  {% else %}
+
+  {% for cat_name, items in grouped | dictsort(by='key') %}
+    {% set count = items | length %}
+
+    <div class="section-label" style="display:flex;align-items:center;gap:12px;margin-top:24px;margin-bottom:12px">
+      <span>{{ cat_name }}</span>
+      <span class="nav-badge">{{ count }}</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      {% for item in items %}
+        <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:start;{% if item.is_duplicate %}opacity:0.6;background:var(--bg2){% endif %}">
+          <div style="flex:1">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+              <span style="font-weight:600;color:var(--text)">
+                {{ item.suggested_title or item.title }}
+              </span>
+              {% if item.is_duplicate %}
+              <span style="font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:3px">[重複]</span>
+              {% endif %}
+            </div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:6px">
+              {{ item.source_name }}
+              {% if item.published_at %}
+              · {{ item.published_at }}
+              {% endif %}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+              {% if item.region %}
+              <span class="badge badge-region-{{ item.region }}">
+                {% if item.region == 'taiwan' %}🇹🇼 台灣{% else %}🌐 全球{% endif %}
+              </span>
+              {% endif %}
+              {% if item.category %}
+              <span class="badge badge-category-{{ item.category }}">{{ item.category }}</span>
+              {% endif %}
+              {% if item.topic_id %}
+              <span class="badge badge-cluster">🧩 Topic #{{ item.topic_id }}</span>
+              {% endif %}
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text3)">
+              {% if item.ai_score %}
+              <span>📊 AI 評分: {{ "%.1f"|format(item.ai_score) }}/10</span>
+              {% endif %}
+              {% if item.status %}
+              <span>
+                {% if item.status == "new" %}
+                🔵 未評分
+                {% elif item.status == "candidate" %}
+                🟢 候選
+                {% elif item.status == "selected" %}
+                🟡 已選
+                {% elif item.status == "skipped" %}
+                ⭕ 略過
+                {% endif %}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("dateSelect").addEventListener("change", (e) => {
+  const date = e.target.value;
+  if (date) {
+    window.location.href = "/all-news?date=" + encodeURIComponent(date);
+  }
+});
+
+async function recommendBrief() {
+  const date = new URLSearchParams(window.location.search).get("date") || "{{ date }}";
+  try {
+    const res = await fetch("/api/recommend-brief", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      window.location.href = "/?date=" + encodeURIComponent(date);
+    } else {
+      alert("推薦失敗：" + (data.error || "未知錯誤"));
+    }
+  } catch (e) {
+    alert("網路錯誤：" + e);
+  }
+}
+</script>
+{% endblock %}

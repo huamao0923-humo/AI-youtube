@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}系統日誌{% endblock %}
 
+{# 所有樣式已搬進 web_ui/static/css/app.css（.log-card / .log-err / .log-warn / .log-info） #}
+
 {% block content %}
 <div class="topbar">
   <div class="topbar-left">
@@ -14,13 +16,13 @@
 
 <div class="content">
 {% if lines %}
-<div class="card" style="padding:0;overflow:hidden">
-  <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-    <span style="font-size:11px;color:var(--text3)">{{ log_file }}</span>
-    <span style="font-size:11px;color:var(--text3)">{{ lines|length }} 行</span>
+<div class="card log-card">
+  <div class="log-header">
+    <span class="log-meta">{{ log_file }}</span>
+    <span class="log-meta">{{ lines|length }} 行</span>
   </div>
-  <div style="overflow-x:auto">
-  <pre style="padding:16px;font-size:11px;line-height:1.7;font-family:'Fira Code','Cascadia Code',monospace;color:var(--text2);margin:0;white-space:pre-wrap;word-break:break-all">{% for line in lines %}<span class="log-line {% if 'ERROR' in line %}log-err{% elif 'WARNING' in line %}log-warn{% elif 'INFO' in line %}log-info{% endif %}">{{ line }}</span>
+  <div class="log-scroll">
+  <pre class="log-pre">{% for line in lines %}<span class="log-line {% if 'ERROR' in line %}log-err{% elif 'WARNING' in line %}log-warn{% elif 'INFO' in line %}log-info{% endif %}">{{ line }}</span>
 {% endfor %}</pre>
   </div>
 </div>
@@ -32,12 +34,4 @@
 </div>
 {% endif %}
 </div>
-{% endblock %}
-
-{% block head %}
-<style>
-.log-err  { color: #fca5a5; }
-.log-warn { color: #fcd34d; }
-.log-info { color: var(--text2); }
-</style>
 {% endblock %}

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}製作進度{% endblock %}
 
+{# 所有樣式已搬進 web_ui/static/css/app.css
+   （.spinner-md / .pipe-progress-* / .status-info-card / .pipe-video-* 等） #}
+
 {% block content %}
 <div class="topbar">
   <div class="topbar-left">
@@ -15,14 +18,14 @@
 <div class="content">
 
   {% if status.error_msg %}
-  <div class="banner banner-warn" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+  <div class="banner banner-warn banner-row">
     <span>⚠️ {{ status.error_msg[:150] }}</span>
-    <div style="display:flex;gap:8px;flex-shrink:0">
-      <button class="btn btn-ghost btn-sm" onclick="retryAuto()" style="white-space:nowrap">↺ 重試自動模式</button>
+    <div class="status-banner-actions">
+      <button class="btn btn-ghost btn-sm btn-nowrap" onclick="retryAuto()">↺ 重試自動模式</button>
       {% if status.stage == 'researching' %}
-      <a href="/cowork/research" class="btn btn-primary btn-sm" style="white-space:nowrap">手動 CoWork →</a>
+      <a href="/cowork/research" class="btn btn-primary btn-sm btn-nowrap">手動 CoWork →</a>
       {% elif status.stage == 'scripting' %}
-      <a href="/cowork/script" class="btn btn-primary btn-sm" style="white-space:nowrap">手動 CoWork →</a>
+      <a href="/cowork/script" class="btn btn-primary btn-sm btn-nowrap">手動 CoWork →</a>
       {% endif %}
     </div>
   </div>
@@ -30,12 +33,12 @@
 
   {% if selected %}
   <div class="section-label">本集資訊</div>
-  <div class="card" style="margin-bottom:24px">
-    <div class="card-body" style="padding:16px 20px">
+  <div class="card status-info-card">
+    <div class="card-body card-body-pad-lg">
       <div class="meta-grid">
         <div class="meta-box">
           <div class="label">選定標題</div>
-          <div class="val" style="font-weight:600;color:var(--text)">
+          <div class="val status-info-title">
             {{ selected.suggested_title or selected.title }}
           </div>
         </div>
@@ -45,7 +48,7 @@
         </div>
       </div>
       {% if status.custom_note %}
-      <div style="margin-top:8px;font-size:12px;color:var(--text3)">
+      <div class="status-custom-note">
         補充：{{ status.custom_note }}
       </div>
       {% endif %}
@@ -56,19 +59,21 @@
   <div class="section-label">流程進度</div>
 
   {% set all_stages = [
-    ('idle',        '⏸', '等待選題',     '尚未選定今日主題'),
-    ('selected',    '✅', '已選題',       '主題確認，等待腳本生成'),
-    ('researching', '🔍', '深度研究中',   '搜集背景資料與數據'),
-    ('scripting',   '✍️', '腳本生成中',   'Claude 正在撰寫完整腳本'),
-    ('script_ready','📄', '腳本待審閱',   '請至「腳本審閱」頁確認後繼續'),
-    ('tts',         '🎙️', '配音生成中',   'XTTS-v2 本地生成配音'),
-    ('images',      '🖼️', '圖片生成中',   'ComfyUI 生成場景圖片'),
-    ('compositing', '🎬', '影片合成中',   'FFmpeg 合成影片與字幕'),
-    ('uploading',   '📤', '上傳 YouTube', '影片上傳並排程台灣時間 20:00 發布'),
-    ('done',        '🎉', '今日完成',     '影片已排程，社群貼文備妥'),
+    ('idle',         '⏸', '等待選題',       '尚未選定今日主題'),
+    ('selected',     '✅', '已選題',         '主題確認，等待腳本生成'),
+    ('researching',  '🔍', '深度研究中',     '搜集背景資料與數據'),
+    ('scripting',    '✍️', '腳本生成中',     'Claude 正在撰寫完整腳本'),
+    ('script_ready', '📄', '腳本待審閱',     '請至「腳本審閱」頁確認後繼續'),
+    ('tts',          '🎙️', '配音生成中',     'edge-tts 本地生成配音'),
+    ('prefetch',     '📥', '預抓素材',       'Pexels B-roll + 縮圖'),
+    ('compositing',  '🎬', '影片合成中',     'FFmpeg 合成影片'),
+    ('upload_ready', '🎞️', '影片待確認上傳', '請預覽影片後確認是否上傳 YouTube'),
+    ('uploading',    '📤', '上傳 YouTube',   '影片上傳並排程台灣時間 20:00 發布'),
+    ('done',         '🎉', '今日完成',       '影片已排程，社群貼文備妥'),
   ] %}
-  {% set stage_order = ['idle','selected','researching','scripting','script_ready','tts','images','compositing','uploading','done'] %}
-  {% set cur = stage_order.index(status.stage) if status.stage in stage_order else 0 %}
+  {% set stage_order = ['idle','selected','researching','scripting','script_ready','tts','prefetch','compositing','upload_ready','uploading','done'] %}
+  {% set _cur_stage = 'prefetch' if status.stage == 'images' else status.stage %}
+  {% set cur = stage_order.index(_cur_stage) if _cur_stage in stage_order else 0 %}
 
   <div class="pipeline">
   {% for key, icon, name, desc in all_stages %}
@@ -78,25 +83,62 @@
         <div class="pipe-dot">{{ icon }}</div>
         <div class="pipe-body"><div class="pipe-name">{{ name }}</div><div class="pipe-desc">{{ desc }}</div></div>
       </div>
-    {% elif key == status.stage %}
+    {% elif key == _cur_stage %}
       <div class="pipe-step active">
         <div class="pipe-dot">{{ icon }}</div>
         <div class="pipe-body">
-          <div class="pipe-name">{{ name }}</div>
+          <div class="pipe-name pipe-name-with-spinner">
+            {{ name }}
+            {% if key in ['researching','scripting','tts','prefetch','compositing','uploading'] %}
+            <span class="spinner-md"></span>
+            {% endif %}
+          </div>
           <div class="pipe-desc">{{ desc }}</div>
+
+          {% if key in ['researching','scripting','tts','prefetch','compositing','uploading'] %}
+          <div class="pipe-progress-wrap">
+            <div class="pipe-elapsed">
+              已執行 <span id="elapsed-timer">計算中…</span>
+            </div>
+            <div class="pipe-progress-bar-track">
+              <div id="progress-bar" class="pipe-progress-bar-fill"></div>
+            </div>
+            {% if status.progress_detail %}
+            <div id="progress-detail" class="pipe-progress-detail">
+              ▶ {{ status.progress_detail }}
+            </div>
+            {% else %}
+            <div id="progress-detail" class="pipe-progress-detail empty"></div>
+            {% endif %}
+          </div>
+          {% endif %}
+
           {% if key == 'selected' %}
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <div class="pipe-actions">
             <button onclick="startAuto()" id="btn-auto" class="btn btn-primary btn-sm">
               ▶ 啟動自動模式（claude CLI）
             </button>
             <a href="/cowork/research" class="btn btn-ghost btn-sm">手動 CoWork →</a>
           </div>
           {% elif key == 'researching' %}
-          <a href="/cowork/research" class="btn btn-primary btn-sm" style="margin-top:10px">🤖 前往 CoWork 研究 →</a>
+          <a href="/cowork/research" class="btn btn-ghost btn-sm pipe-link-cowork">🤖 前往 CoWork 研究 →</a>
           {% elif key == 'scripting' %}
-          <a href="/cowork/script" class="btn btn-primary btn-sm" style="margin-top:10px">🤖 前往 CoWork 腳本 →</a>
+          <a href="/cowork/script" class="btn btn-ghost btn-sm pipe-link-cowork">🤖 前往 CoWork 腳本 →</a>
           {% elif key == 'script_ready' %}
-          <a href="/script" class="btn btn-primary btn-sm" style="margin-top:10px">前往審閱腳本 →</a>
+          <a href="/script" class="btn btn-primary btn-sm pipe-link-cowork">前往審閱腳本 →</a>
+          {% elif key == 'upload_ready' %}
+          <div class="pipe-video-block">
+            <video controls class="pipe-video-player">
+              <source src="/video/preview" type="video/mp4">
+              瀏覽器不支援 video 標籤
+            </video>
+            <div class="pipe-actions">
+              <button onclick="confirmUpload()" id="btn-upload" class="btn btn-primary btn-sm">
+                📤 確認上傳 YouTube
+              </button>
+              <a href="/video/preview" target="_blank" class="btn btn-ghost btn-sm">⬇ 另開視窗</a>
+            </div>
+          </div>
           {% endif %}
         </div>
       </div>
@@ -114,6 +156,43 @@
 
 {% block scripts %}
 <script>
+// 計時器：從 status.updated_at 開始算
+const stageStart = new Date("{{ status.updated_at or '' }}");
+const isActiveStage = {{ 'true' if status.stage in ['researching','scripting','tts','images','compositing','uploading'] else 'false' }};
+
+// 各 stage 預估秒數（進度條用）
+const STAGE_ESTIMATE = {
+  researching: 120, scripting: 180, tts: 300, images: 240, compositing: 600, uploading: 180
+};
+const curStage = '{{ status.stage }}';
+const estimate = STAGE_ESTIMATE[curStage] || 300;
+
+function updateTimer() {
+  if (!isActiveStage) return;
+  const el = document.getElementById('elapsed-timer');
+  const bar = document.getElementById('progress-bar');
+  if (!el) return;
+
+  const now = new Date();
+  const secs = Math.floor((now - stageStart) / 1000);
+  const mins = Math.floor(secs / 60);
+  const s = secs % 60;
+  el.textContent = mins > 0 ? `${mins} 分 ${s} 秒` : `${s} 秒`;
+
+  // 進度條（以預估時間為基準，最多到 95%）
+  if (bar) {
+    const pct = Math.min(95, Math.round((secs / estimate) * 100));
+    bar.style.width = pct + '%';
+  }
+}
+
+if (isActiveStage) {
+  updateTimer();
+  setInterval(updateTimer, 1000);
+}
+</script>
+
+<script>
 // SSE 即時更新 — 比整頁刷新更精準
 const evtSrc = new EventSource('/api/sse/status');
 evtSrc.onmessage = (e) => {
@@ -126,14 +205,19 @@ evtSrc.onmessage = (e) => {
     location.reload();
     return;
   }
+  // 即時更新 progress_detail
+  const detailEl = document.getElementById('progress-detail');
+  if (detailEl && d.progress_detail) {
+    detailEl.textContent = '▶ ' + d.progress_detail;
+    detailEl.classList.remove('empty');
+  }
   // 有 error_msg 時即時顯示警示
   if (d.error_msg) {
     let b = document.getElementById('sse-error');
     if (!b) {
       b = document.createElement('div');
       b.id = 'sse-error';
-      b.className = 'banner banner-warn';
-      b.style.cssText = 'position:fixed;bottom:16px;right:16px;max-width:400px;z-index:99';
+      b.className = 'banner banner-warn banner-floating-err';
       document.body.appendChild(b);
     }
     b.textContent = '⚠️ ' + d.error_msg;
@@ -146,6 +230,37 @@ evtSrc.onerror = () => {
 
 // 腳本審閱快捷
 function goScript() { location.href = '/script'; }
+
+// 確認上傳 YouTube
+async function confirmUpload() {
+  const btn = document.getElementById('btn-upload');
+  if (!btn) return;
+  const ok = await confirmModal({
+    title: '確認上傳 YouTube',
+    body: '上傳後將自動排程<strong>台灣時間 20:00</strong> 發布。',
+    icon: '📤',
+    confirmText: '確認上傳',
+  });
+  if (!ok) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ 準備上傳…';
+  try {
+    const res = await fetch('/api/upload-confirm', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      btn.textContent = '✅ 已送出，上傳中…';
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      btn.disabled = false;
+      btn.textContent = '📤 確認上傳 YouTube';
+      alert('失敗：' + (data.error || '未知錯誤'));
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '📤 確認上傳 YouTube';
+    alert('網路錯誤：' + e);
+  }
+}
 
 // 重試自動模式：把 stage 重置回 selected，讓 watcher 重新跑
 async function retryAuto() {

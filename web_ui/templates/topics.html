@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}主題瀏覽{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <header class="page-header">
+    <h1>🧩 主題瀏覽</h1>
+    <div class="muted">篩選與管理所有主題</div>
+  </header>
+
+  <!-- ── 篩選列 ── -->
+  <form class="filter-bar card" method="get">
+    <div class="filter-group">
+      <label>地區</label>
+      <select name="region" class="input-select input-sm">
+        <option value="" {% if not filter_region %}selected{% endif %}>全部</option>
+        <option value="taiwan" {% if filter_region == "taiwan" %}selected{% endif %}>🇹🇼 台灣</option>
+        <option value="global" {% if filter_region == "global" %}selected{% endif %}>🌐 全球</option>
+        <option value="mixed" {% if filter_region == "mixed" %}selected{% endif %}>🌍 混合</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>分類</label>
+      <select name="category" class="input-select input-sm">
+        <option value="" {% if not filter_category %}selected{% endif %}>全部</option>
+        {% for cat, cnt in cat_counts.items() %}
+        <option value="{{ cat }}" {% if filter_category == cat %}selected{% endif %}>
+          {{ cat }} ({{ cnt }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>狀態</label>
+      <select name="status" class="input-select input-sm">
+        <option value="open" {% if filter_status == "open" %}selected{% endif %}>🟢 open</option>
+        <option value="used" {% if filter_status == "used" %}selected{% endif %}>🔵 used</option>
+        <option value="archived" {% if filter_status == "archived" %}selected{% endif %}>⚫ archived</option>
+        <option value="" {% if not filter_status %}selected{% endif %}>全部</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>排序</label>
+      <select name="sort" class="input-select input-sm">
+        <option value="aggregate_score" {% if filter_sort == "aggregate_score" %}selected{% endif %}>熱度分數</option>
+        <option value="last_seen" {% if filter_sort == "last_seen" %}selected{% endif %}>最近看到</option>
+        <option value="news_count" {% if filter_sort == "news_count" %}selected{% endif %}>新聞數</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>日期</label>
+      <input type="date" class="input input-sm" name="date" value="{{ filter_date or '' }}">
+    </div>
+
+    <button type="submit" class="btn-primary">篩選</button>
+    <a href="/topics" class="btn-ghost">清除</a>
+  </form>
+
+  <!-- ── 主題列表 ── -->
+  <div class="muted section-subtitle">共 {{ topics|length }} 個主題</div>
+
+  {% if topics %}
+  <div class="topic-grid">
+    {% for t in topics %}
+    <div class="topic-card">
+      <div class="topic-card-title">
+        <a href="/topic/{{ t.slug }}">{{ t.title }}</a>
+      </div>
+      <div class="topic-card-meta">
+        {% if t.category %}<span class="badge badge-category-{{ t.category }}">{{ t.category }}</span>{% endif %}
+        <span class="badge badge-region-{{ t.region }}">
+          {% if t.region == "taiwan" %}🇹🇼 台灣{% elif t.region == "global" %}🌐 全球{% else %}🌍 混合{% endif %}
+        </span>
+        <span class="badge badge-count">{{ t.news_count }} 則</span>
+        <span class="badge badge-score">★ {{ '%.1f'|format(t.aggregate_score or 0) }}</span>
+        <span class="badge badge-status-{{ t.status }}">{{ t.status }}</span>
+      </div>
+      <div class="topic-card-date muted">
+        最近：{{ t.last_seen_date }}｜建立：{{ t.first_seen_date }}
+      </div>
+      <div class="topic-card-actions">
+        <a href="/topic/{{ t.slug }}" class="btn-ghost btn-sm">查看</a>
+        {% if t.status == "open" %}
+        <form action="/select-topic" method="post" style="display:inline">
+          <input type="hidden" name="topic_id" value="{{ t.id }}">
+          <button type="submit" class="btn-primary btn-sm">製作集數</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty-state">
+    <p>沒有符合條件的主題。</p>
+    <p class="muted">可調整篩選，或到 <a href="/all-news">所有新聞</a> 建立手動主題。</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

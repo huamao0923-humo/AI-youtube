@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}儀表板{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/worldmonitor.css">
+<script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <header class="page-header">
+    <h1>🏠 專案儀表板</h1>
+    <div class="muted">{{ ds.date }}（台灣時間）</div>
+  </header>
+
+  <!-- ── KPI 卡片 ── -->
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">今日爬量</div>
+      <div class="kpi-value">{{ ds.total_today }}</div>
+      <div class="kpi-meta">
+        <span class="region-chip region-taiwan">🇹🇼 {{ ds.taiwan_today }}</span>
+        <span class="region-chip region-global">🌐 {{ ds.global_today }}</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">未評分</div>
+      <div class="kpi-value {% if ds.unscored > 0 %}warn{% endif %}">{{ ds.unscored }}</div>
+      <div class="kpi-meta">
+        <a href="/scoring">去評分 →</a>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">候選新聞</div>
+      <div class="kpi-value good">{{ ds.candidates }}</div>
+      <div class="kpi-meta">
+        <a href="/today">今日候選 →</a>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">進行中集數</div>
+      <div class="kpi-value">{{ ds.active_episodes }}</div>
+      <div class="kpi-meta">
+        <span class="muted">主題池：{{ ds.open_topics }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── worldmonitor 風格：Trending + Radar ── -->
+  <section class="wm-grid">
+    <div class="wm-card">
+      <div class="wm-card-head">
+        <div class="wm-card-title">🔥 Trending Topics</div>
+        <div class="wm-card-sub">依複合熱度指數排序</div>
+      </div>
+      <div id="wm-trending" class="wm-trending-list">
+        <div class="wm-empty">載入中…</div>
+      </div>
+    </div>
+
+    <div class="wm-card">
+      <div class="wm-card-head">
+        <div class="wm-card-title">📡 信號雷達</div>
+        <div class="wm-card-sub">6 分類熱度 · 今日 vs 7 日均</div>
+      </div>
+      <div id="wm-radar-chart" class="wm-radar-chart"></div>
+    </div>
+  </section>
+
+  <!-- ── 事件時間軸 ── -->
+  <section class="card section wm-timeline-card">
+    <h2>📅 事件時間軸</h2>
+    <div class="section-subtitle muted">30 天內主題熱度變化（氣泡大小=新聞數，點擊進主題詳情）</div>
+    <div id="wm-timeline-filters" class="wm-timeline-filters"></div>
+    <div id="wm-timeline-chart" class="wm-timeline-chart"></div>
+  </section>
+
+  <!-- ── Pipeline Board ── -->
+  <section class="card section">
+    <h2>🚀 集數進度</h2>
+    {% set stage_order = ["selected", "researching", "scripting", "script_ready", "tts", "prefetch", "compositing", "upload_ready", "uploading", "done"] %}
+    {% set stage_labels = {
+        "selected": "已選題",
+        "researching": "深度研究",
+        "scripting": "腳本生成",
+        "script_ready": "腳本待審",
+        "tts": "配音",
+        "prefetch": "預抓素材",
+        "images": "預抓素材",
+        "compositing": "影片合成",
+        "upload_ready": "待上傳",
+        "uploading": "上傳中",
+        "done": "完成",
+    } %}
+    <div class="pipeline-board">
+      {% for stage in stage_order %}
+      <div class="pipe-col">
+        <div class="pipe-col-header">
+          <span class="pipe-col-name">{{ stage_labels[stage] }}</span>
+          <span class="pipe-col-count">{{ ds.stage_counts.get(stage, 0) }}</span>
+        </div>
+        {% for ep in episode_statuses if ep.stage == stage %}
+        <a class="ep-card{% if ep.error_msg %} ep-card-has-err{% endif %}" href="/episode/{{ ep.slug }}"
+           title="{{ ep.slug }}{% if ep.error_msg %}&#10;錯誤：{{ ep.error_msg[:120] }}{% endif %}">
+          <div class="ep-card-slug ep-card-slug-wrap">{{ ep.slug }}</div>
+          {% if ep.updated_at %}
+          <div class="ep-card-elapsed" data-updated="{{ ep.updated_at }}">⏱ …</div>
+          {% endif %}
+          {% if ep.error_msg %}<div class="ep-card-err">⚠ {{ ep.error_msg[:40] }}</div>{% endif %}
+          {% if ep.progress_detail %}<div class="ep-card-progress">{{ ep.progress_detail[:60] }}</div>{% endif %}
+        </a>
+        {% else %}
+        <div class="ep-empty">—</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ── 熱門主題 ── -->
+  <section class="card section">
+    <h2>🧩 今日熱門主題</h2>
+    <div class="section-subtitle muted">
+      {{ topics|length }} 個 open 主題｜按 aggregate_score 排序
+    </div>
+    {% if topics %}
+    <div class="topic-grid">
+      {% for t in topics %}
+      <div class="topic-card">
+        <div class="topic-card-title">
+          <a href="/topic/{{ t.slug }}">{{ t.title }}</a>
+        </div>
+        <div class="topic-card-meta">
+          {% if t.category %}<span class="badge badge-category-{{ t.category }}">{{ t.category }}</span>{% endif %}
+          <span class="badge badge-region-{{ t.region }}">
+            {% if t.region == "taiwan" %}🇹🇼 台灣{% elif t.region == "global" %}🌐 全球{% else %}🌍 混合{% endif %}
+          </span>
+          <span class="badge badge-count">{{ t.news_count }} 則</span>
+          <span class="badge badge-score">★ {{ '%.1f'|format(t.aggregate_score or 0) }}</span>
+        </div>
+        <form action="/select-topic" method="post" class="topic-card-actions">
+          <input type="hidden" name="topic_id" value="{{ t.id }}">
+          <button type="submit" class="btn-primary btn-sm">製作集數</button>
+          <a href="/topic/{{ t.slug }}" class="btn-ghost btn-sm">查看</a>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>目前沒有 open 主題。</p>
+      <p class="muted">主題會在爬蟲 + 聚類後自動生成。或從 <a href="/all-news">所有新聞</a> 手動建立。</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- ── 分類分佈 ── -->
+  <section class="card section">
+    <h2>📂 今日新聞分類分佈</h2>
+    <div class="category-dist">
+      {% for cat, cnt in ds.category_counts.items() %}
+      <div class="cat-chip">
+        <span class="badge badge-category-{{ cat }}">{{ cat }}</span>
+        <span class="cat-count">{{ cnt }}</span>
+      </div>
+      {% else %}
+      <div class="muted">尚未有分類資料</div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 即時計算「已等多久」
+function fmtElapsed(updatedIso) {
+  try {
+    const t = new Date(updatedIso + (updatedIso.includes('Z') || updatedIso.includes('+') ? '' : 'Z'));
+    const diffMs = Date.now() - t.getTime();
+    if (diffMs < 0) return '剛剛';
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return '剛剛';
+    if (mins < 60) return mins + ' 分';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + ' 時 ' + (mins % 60) + ' 分';
+    const days = Math.floor(hrs / 24);
+    return days + ' 天';
+  } catch (e) { return '—'; }
+}
+function refreshElapsed() {
+  document.querySelectorAll('[data-updated]').forEach(el => {
+    el.textContent = '⏱ ' + fmtElapsed(el.dataset.updated);
+  });
+}
+refreshElapsed();
+setInterval(refreshElapsed, 30000);
+</script>
+<script defer src="/static/js/dashboard_trending.js"></script>
+<script defer src="/static/js/dashboard_radar.js"></script>
+<script defer src="/static/js/dashboard_timeline.js"></script>
+{% endblock %}

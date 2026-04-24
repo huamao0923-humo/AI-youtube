@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}所有集數{% endblock %}
+
+{# 所有樣式已搬進 web_ui/static/css/app.css（.ep-table / .stage-badge / .file-marks） #}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>所有集數</h1>
+    <span class="sub">共 {{ rows|length }} 集</span>
+  </div>
+  <div class="topbar-actions">
+    {% if date_filter %}
+    <a href="/episodes" class="btn btn-ghost">清除日期過濾</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="content">
+  {% if not rows %}
+  <div class="banner banner-warn">
+    尚無集數記錄。執行 <code>python scripts/backfill_episodes.py</code> 回填既有檔案，
+    或從「今日選題」建立新集數。
+  </div>
+  {% else %}
+  <table class="ep-table">
+    <thead>
+      <tr>
+        <th style="width:90px">日期</th>
+        <th>標題 / Slug</th>
+        <th style="width:120px">Stage</th>
+        <th style="width:120px">檔案</th>
+        <th style="width:90px">YouTube</th>
+        <th style="width:140px">更新時間</th>
+        <th style="width:100px">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.date }}</td>
+      <td>
+        <div class="title">{{ r.title or r.slug }}</div>
+        <div class="slug">{{ r.slug }}</div>
+      </td>
+      <td>
+        <span class="stage-badge stage-{{ r.stage }}">{{ r.stage }}</span>
+        {% if r.error_msg %}<div class="ep-error">⚠️ 有錯誤</div>{% endif %}
+      </td>
+      <td class="file-marks">
+        <span class="{{ 'on' if r.has_audio else 'off' }}">♪ 音訊</span><br>
+        <span class="{{ 'on' if r.n_images > 0 else 'off' }}">🖼 {{ r.n_images }}張</span><br>
+        <span class="{{ 'on' if r.has_video else 'off' }}">🎬 影片</span>
+      </td>
+      <td>
+        {% if r.youtube_id %}
+        <a href="https://youtu.be/{{ r.youtube_id }}" target="_blank" class="ep-link-yt">已上傳 ↗</a>
+        {% else %}
+        <span class="ep-empty">—</span>
+        {% endif %}
+      </td>
+      <td class="slug">{{ r.updated_at[:19] if r.updated_at else '—' }}</td>
+      <td>
+        <a href="/episode/{{ r.slug }}" class="btn btn-primary btn-sm">管理 →</a>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

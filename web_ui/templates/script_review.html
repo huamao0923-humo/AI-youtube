@@ -10,6 +10,19 @@
     {% endif %}
   </div>
   <div class="topbar-actions">
+    {% if all_slugs and all_slugs|length > 0 %}
+    <label class="script-slug-selector">
+      集數：
+      <select onchange="location.href='/script?slug=' + encodeURIComponent(this.value)">
+        {% for s in all_slugs %}
+        <option value="{{ s }}" {% if s == active_slug %}selected{% endif %}>{{ s[:45] }}{% if s|length > 45 %}…{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    {% if active_slug %}
+    <a href="/episode/{{ active_slug }}" class="btn btn-ghost btn-sm">🎬 這集管理</a>
+    {% endif %}
     <a href="/" class="btn btn-ghost">← 返回</a>
   </div>
 </div>
@@ -19,97 +32,503 @@
   <div class="empty">
     <div class="empty-icon">📝</div>
     <div class="empty-title">尚無腳本</div>
-    <div class="empty-desc">請先在選題頁選定主題，執行腳本生成後再來此審閱。<br>
-    <code>python -m modules.script.script_writer --news-id &lt;id&gt;</code></div>
+    <div class="empty-desc">請先在選題頁選定主題，執行腳本生成後再來此審閱。</div>
   </div>
 {% else %}
+  {# ─── 依累積秒數切成 chunk（目標 150-180 秒一段） ─── #}
+  {% set CHUNK_TARGET = 165 %}
+  {% set chunks = [] %}
+  {% set cur_chunk = [] %}
+  {% set cur_dur = namespace(v=0) %}
+  {% set cur_start = namespace(v=0) %}
+  {% for sec in script.script_sections %}
+    {% set _ = cur_chunk.append(sec) %}
+    {% set cur_dur.v = cur_dur.v + (sec.duration_seconds or 0) %}
+    {% if cur_dur.v >= CHUNK_TARGET or loop.last %}
+      {% set _ = chunks.append({'sections': cur_chunk|list, 'start': cur_start.v, 'end': cur_start.v + cur_dur.v, 'dur': cur_dur.v}) %}
+      {% set cur_start.v = cur_start.v + cur_dur.v %}
+      {% set cur_dur.v = 0 %}
+      {% set cur_chunk = [] %}
+    {% endif %}
+  {% endfor %}
+  {% set total_dur = script.script_sections | sum(attribute='duration_seconds') %}
+
   <div class="two-col">
 
-    <!-- 左：腳本段落 -->
+    <!-- 左：腳本章節 -->
     <div>
-      {% set total_dur = script.script_sections | sum(attribute='duration_seconds') %}
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <span class="section-label" style="margin-bottom:0">{{ script.script_sections|length }} 個段落</span>
-        <span style="font-size:12px;color:var(--text3)">⏱ {{ total_dur // 60 }}分{{ total_dur % 60 }}秒</span>
+      <!-- 統計列 -->
+      <div class="review-statbar">
+        <span class="section-label" style="margin-bottom:0">{{ script.script_sections|length }} 段落 · {{ chunks|length }} 章節</span>
+        <span class="review-stat-dim">⏱ {{ total_dur // 60 }}分{{ total_dur % 60 }}秒</span>
+        <span class="review-progress-wrap">
+          <span class="review-progress-label">已審：<span id="review-progress-count">0</span> / {{ chunks|length }}</span>
+          <span class="review-progress-bar"><span class="review-progress-fill" id="review-progress-fill"></span></span>
+        </span>
       </div>
 
-      {% for sec in script.script_sections %}
-      <div class="script-section">
-        <div class="section-head">
-          <span class="type-chip type-{{ sec.type }}">{{ sec.type }}</span>
-          <span style="font-size:12px;color:var(--text2)">段落 {{ sec.section_id }}</span>
-          <span class="section-ts">{{ sec.timestamp }}</span>
-          <span class="section-dur">{{ sec.duration_seconds }}s</span>
+      <!-- AI 審閱按鈕 -->
+      <div class="review-ai-bar">
+        <button class="btn btn-primary" id="btn-ai-review-all">🤖 AI 一鍵審閱（整份）</button>
+        <button class="btn btn-ghost" id="btn-ai-review-chunk">🤖 AI 審本章節</button>
+        <span class="review-stat-dim" id="ai-review-status"></span>
+      </div>
+
+      <!-- Chunk 切換 tab -->
+      <div class="chunk-tabs" id="chunk-tabs">
+        {% for c in chunks %}
+        {% set m_start = c.start // 60 %}{% set s_start = c.start % 60 %}
+        {% set m_end = c.end // 60 %}{% set s_end = c.end % 60 %}
+        <button class="chunk-tab{% if loop.first %} active{% endif %}"
+                data-chunk-idx="{{ loop.index0 }}"
+                data-section-ids="{{ c.sections | map(attribute='section_id') | list | tojson | safe }}">
+          <span class="chunk-tab-num">章 {{ loop.index }}</span>
+          <span class="chunk-tab-range">{{ '%d:%02d'|format(m_start, s_start) }}–{{ '%d:%02d'|format(m_end, s_end) }}</span>
+          <span class="chunk-tab-status" data-chunk-status="{{ loop.index0 }}">未審</span>
+        </button>
+        {% endfor %}
+      </div>
+
+      <!-- Chunk panels -->
+      {% for c in chunks %}
+      <div class="chunk-panel{% if loop.first %} active{% endif %}" data-chunk-panel="{{ loop.index0 }}">
+
+        {% for sec in c.sections %}
+        <div class="script-section" data-section-id="{{ sec.section_id }}">
+          <div class="section-head">
+            <span class="type-chip type-{{ sec.type }}">{{ sec.type }}</span>
+            <span class="section-id-label">段落 {{ sec.section_id }}</span>
+            <span class="section-ts">{{ sec.timestamp }}</span>
+            <span class="section-dur">{{ sec.duration_seconds }}s</span>
+            <span class="section-save-status" data-save-status="{{ sec.section_id }}"></span>
+          </div>
+          <div class="section-body">
+            <div class="narration editable-narration"
+                 contenteditable="true"
+                 data-section-id="{{ sec.section_id }}"
+                 data-original="{{ sec.narration }}"
+                 spellcheck="false">{{ sec.narration }}</div>
+          </div>
         </div>
-        <div class="section-body">
-          <div class="narration">{{ sec.narration }}</div>
-          {% if sec.screen_note %}
-          <div class="screen-note">{{ sec.screen_note }}</div>
-          {% endif %}
-          {% if sec.visual_prompt %}
-          <div class="visual-prompt">🖼 {{ sec.visual_prompt }}</div>
+        {% endfor %}
+
+        <!-- Chunk 底部：標記審畢 / 前往下一章 -->
+        <div class="chunk-footer">
+          <button class="btn btn-ghost btn-sm" data-chunk-mark-done="{{ loop.index0 }}">
+            ✓ 標記本章審畢
+          </button>
+          {% if not loop.last %}
+          <button class="btn btn-primary btn-sm" data-chunk-next="{{ loop.index0 }}">
+            下一章 →
+          </button>
           {% endif %}
         </div>
       </div>
       {% endfor %}
-    </div>
 
-    <!-- 右：資訊面板 -->
-    <div class="info-panel">
-      <h2>本集資訊</h2>
-
-      <div class="info-row">
-        <div class="info-label">預估長度</div>
-        <div class="info-val">{{ script.estimated_duration }}</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">縮圖概念</div>
-        <div class="info-val">{{ script.thumbnail_concept }}</div>
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">標題選項（點擊複製）</div>
-        {% for t in script.title_options %}
-        <div class="title-option"
-          onclick="navigator.clipboard.writeText('{{ t }}').then(()=>{ this.style.borderColor='var(--green)'; setTimeout(()=>this.style.borderColor='',1500) })">
-          <span>{{ t }}</span>
-          <span class="copy-icon">⎘</span>
-        </div>
-        {% endfor %}
-      </div>
-
-      <div class="info-row">
-        <div class="info-label">標籤</div>
-        <div>{% for tag in script.tags[:12] %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
-      </div>
-
-      {% if script.shorts_script %}
-      <div class="info-row">
-        <div class="info-label">Shorts（60s）</div>
-        <div class="info-val" style="font-size:12px;max-height:110px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px 10px">
-          {{ script.shorts_script }}
-        </div>
-      </div>
-      {% endif %}
-
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
-        <form method="POST" action="/script/approve"
-              onsubmit="return confirm('確認後將自動開始配音、圖片、合成流程，確定要繼續嗎？')">
-          <button type="submit" class="btn btn-success btn-lg" style="width:100%">
-            ✅ 確認腳本，開始製作
+      <!-- 整份腳本底部：批准 / 重新生成 -->
+      <div class="review-bottom-bar">
+        <form action="/script/regenerate" method="POST" class="inline-form"
+              data-confirm-title="重新生成腳本"
+              data-confirm-body="目前的編輯會被覆蓋，且無法復原。"
+              data-confirm-icon="🔄"
+              data-confirm-text="確定重新生成"
+              data-confirm-danger="true">
+          <button type="submit" class="btn btn-ghost">
+            🔄 重新生成腳本
           </button>
         </form>
-        <form method="POST" action="/script/regenerate"
-              onsubmit="return confirm('重新生成將覆蓋現有腳本，確定嗎？')">
-          <button type="submit" class="btn btn-ghost" style="width:100%;font-size:12px">
-            ↻ 重新生成腳本
+        <form action="/script/approve" method="POST" class="inline-form">
+          <button type="submit" class="btn btn-success btn-lg" id="btn-approve">
+            ✅ 批准腳本，送往 TTS
           </button>
         </form>
       </div>
     </div>
+
+    <!-- 右：Meta 編輯 + 提示 -->
+    <aside class="review-sidepanel">
+      <div class="card">
+        <div class="section-label" style="margin-bottom:10px">📺 發佈資訊（可編輯）</div>
+
+        {% set chosen_title = (script.title_options[0] if script.title_options else '') %}
+        <div class="info-row">
+          <div class="info-label">影片標題（點擊選定）</div>
+          {% for t in script.title_options %}
+          <label class="title-radio">
+            <input type="radio" name="chosen_title" value="{{ t }}" {% if t == chosen_title %}checked{% endif %}>
+            <span>{{ t }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="info-row">
+          <div class="info-label">縮圖概念 <span class="meta-save" data-save-for="thumbnail_concept"></span></div>
+          <textarea class="input meta-editable" data-meta="thumbnail_concept"
+                    rows="2">{{ script.thumbnail_concept or '' }}</textarea>
+        </div>
+
+        {% if script.thumbnail_punchline is defined %}
+        <div class="info-row">
+          <div class="info-label">縮圖主文字 <span class="meta-save" data-save-for="thumbnail_punchline"></span></div>
+          <input type="text" class="input meta-editable" data-meta="thumbnail_punchline"
+                 maxlength="40" value="{{ script.thumbnail_punchline or '' }}">
+        </div>
+        {% endif %}
+
+        <div class="info-row">
+          <div class="info-label">預估長度</div>
+          <div class="info-val">{{ script.estimated_duration or '—' }}</div>
+        </div>
+
+        <div class="info-row">
+          <div class="info-label">標籤（逗號分隔） <span class="meta-save" data-save-for="tags"></span></div>
+          <textarea class="input meta-editable" data-meta="tags"
+                    rows="2">{{ script.tags | join(', ') if script.tags else '' }}</textarea>
+        </div>
+
+        <div class="info-row">
+          <div class="info-label">YouTube 描述 <span class="meta-save" data-save-for="youtube_description"></span></div>
+          <textarea class="input meta-editable" data-meta="youtube_description"
+                    rows="5">{{ script.youtube_description or '' }}</textarea>
+        </div>
+
+        {% if script.shorts_script %}
+        <div class="info-row">
+          <div class="info-label">Shorts（60s）</div>
+          <div class="info-val" style="font-size:12px;max-height:110px;overflow-y:auto;background:var(--bg2);border-radius:6px;padding:8px 10px;line-height:1.5">{{ script.shorts_script }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card review-hint-card" style="margin-top:12px">
+        <div class="section-label">提示</div>
+        <ul class="review-hint-list">
+          <li>點擊任一段落就地編輯，失焦自動儲存</li>
+          <li>右側標題 radio + 標籤 + 描述會自動存檔</li>
+          <li>「AI 一鍵審閱」會掃整份腳本列出建議修改</li>
+          <li>審畢狀態保存在瀏覽器 localStorage</li>
+        </ul>
+      </div>
+    </aside>
 
   </div>
+
+  <!-- ─── AI 審閱 Diff Modal ─── -->
+  <div class="ai-diff-modal" id="ai-diff-modal" hidden>
+    <div class="ai-diff-dialog">
+      <div class="ai-diff-head">
+        <h2>🤖 AI 審閱建議</h2>
+        <button class="btn btn-ghost btn-sm" id="btn-diff-close">✕ 關閉</button>
+      </div>
+      <div class="ai-diff-summary" id="ai-diff-summary"></div>
+      <div class="ai-diff-list" id="ai-diff-list"></div>
+      <div class="ai-diff-foot">
+        <button class="btn btn-ghost" id="btn-diff-select-none">全部取消勾選</button>
+        <button class="btn btn-ghost" id="btn-diff-select-all">全部勾選</button>
+        <button class="btn btn-primary" id="btn-diff-apply">套用勾選的變更</button>
+      </div>
+    </div>
+  </div>
+
 {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const totalChunks = {{ chunks|length if chunks else 0 }};
+  const ACTIVE_SLUG = {{ active_slug|tojson if active_slug else 'null' }};
+  const STORAGE_KEY = 'script_review_done_chunks_v1' + (ACTIVE_SLUG ? '_' + ACTIVE_SLUG : '');
+
+  // 幫所有 API 呼叫自動夾帶 slug
+  function apiBody(extra) {
+    const body = Object.assign({}, extra || {});
+    if (ACTIVE_SLUG) body.slug = ACTIVE_SLUG;
+    return body;
+  }
+
+  // ─── 章節切換 ───
+  const tabs = document.querySelectorAll('.chunk-tab');
+  const panels = document.querySelectorAll('.chunk-panel');
+  function switchChunk(idx) {
+    tabs.forEach(t => t.classList.toggle('active', +t.dataset.chunkIdx === idx));
+    panels.forEach(p => p.classList.toggle('active', +p.dataset.chunkPanel === idx));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => switchChunk(+tab.dataset.chunkIdx));
+  });
+
+  // ─── 章節審畢狀態（localStorage） ───
+  function loadDone() {
+    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveDone(doneSet) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...doneSet]));
+  }
+  function renderDoneStatus() {
+    const done = loadDone();
+    document.querySelectorAll('[data-chunk-status]').forEach(el => {
+      const idx = +el.dataset.chunkStatus;
+      if (done.has(idx)) { el.textContent = '已審'; el.classList.add('done'); }
+      else { el.textContent = '未審'; el.classList.remove('done'); }
+    });
+    const count = document.getElementById('review-progress-count');
+    const fill = document.getElementById('review-progress-fill');
+    if (count) count.textContent = done.size;
+    if (fill && totalChunks > 0) {
+      fill.style.width = Math.round(done.size / totalChunks * 100) + '%';
+    }
+  }
+  renderDoneStatus();
+
+  document.querySelectorAll('[data-chunk-mark-done]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.chunkMarkDone;
+      const done = loadDone();
+      if (done.has(idx)) done.delete(idx); else done.add(idx);
+      saveDone(done);
+      renderDoneStatus();
+    });
+  });
+  document.querySelectorAll('[data-chunk-next]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.chunkNext;
+      // 點下一章的時候順便把本章標審畢
+      const done = loadDone();
+      done.add(idx);
+      saveDone(done);
+      renderDoneStatus();
+      switchChunk(idx + 1);
+    });
+  });
+
+  // ─── 就地編輯（contenteditable）→ blur 自動儲存 ───
+  async function saveSection(el) {
+    const sid = +el.dataset.sectionId;
+    const latest = el.textContent.trim();
+    const original = (el.dataset.original || '').trim();
+    const statusEl = document.querySelector(`[data-save-status="${sid}"]`);
+    if (latest === original) {
+      if (statusEl) { statusEl.textContent = ''; statusEl.className = 'section-save-status'; }
+      return;
+    }
+    if (!latest) {
+      if (statusEl) { statusEl.textContent = '✕ 內容不可為空'; statusEl.className = 'section-save-status error'; }
+      return;
+    }
+    if (statusEl) { statusEl.textContent = '⏳ 儲存中…'; statusEl.className = 'section-save-status editing'; }
+    try {
+      const resp = await fetch(`/api/script/section/${sid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody({ narration: latest })),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        el.dataset.original = latest;
+        if (statusEl) { statusEl.textContent = '✓ 已儲存'; statusEl.className = 'section-save-status saved'; }
+        setTimeout(() => { if (statusEl) { statusEl.textContent = ''; statusEl.className = 'section-save-status'; } }, 2000);
+      } else {
+        if (statusEl) { statusEl.textContent = '✕ ' + (data.error || '儲存失敗'); statusEl.className = 'section-save-status error'; }
+      }
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = '✕ 網路錯誤'; statusEl.className = 'section-save-status error'; }
+    }
+  }
+  document.querySelectorAll('.editable-narration').forEach(el => {
+    el.addEventListener('blur', () => saveSection(el));
+    el.addEventListener('input', () => {
+      const sid = +el.dataset.sectionId;
+      const statusEl = document.querySelector(`[data-save-status="${sid}"]`);
+      if (statusEl && el.textContent.trim() !== (el.dataset.original || '').trim()) {
+        statusEl.textContent = '✎ 未儲存';
+        statusEl.className = 'section-save-status editing';
+      }
+    });
+    // Enter 不要換行成 <br>，改成失焦觸發儲存
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        el.blur();
+      }
+    });
+  });
+
+  // ─── AI 審閱（整份 / 本章節） ───
+  const aiStatus = document.getElementById('ai-review-status');
+  async function triggerAiReview(sectionIds) {
+    const btnAll = document.getElementById('btn-ai-review-all');
+    const btnChunk = document.getElementById('btn-ai-review-chunk');
+    if (btnAll) btnAll.disabled = true;
+    if (btnChunk) btnChunk.disabled = true;
+    if (aiStatus) aiStatus.textContent = '⏳ AI 審閱中（約 20-60 秒）…';
+    try {
+      const resp = await fetch('/api/script/ai-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody(sectionIds ? { section_ids: sectionIds } : {})),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        renderDiffs(data.summary || '', data.changes || []);
+        if (aiStatus) aiStatus.textContent = `✓ 審閱完成（${(data.changes || []).length} 則建議）`;
+      } else {
+        if (aiStatus) aiStatus.textContent = '✕ ' + (data.error || '審閱失敗');
+      }
+    } catch (e) {
+      if (aiStatus) aiStatus.textContent = '✕ 網路錯誤';
+    } finally {
+      if (btnAll) btnAll.disabled = false;
+      if (btnChunk) btnChunk.disabled = false;
+    }
+  }
+  const btnAiAll = document.getElementById('btn-ai-review-all');
+  if (btnAiAll) btnAiAll.addEventListener('click', () => triggerAiReview(null));
+  const btnAiChunk = document.getElementById('btn-ai-review-chunk');
+  if (btnAiChunk) btnAiChunk.addEventListener('click', () => {
+    const activeTab = document.querySelector('.chunk-tab.active');
+    if (!activeTab) return;
+    let ids = [];
+    try { ids = JSON.parse(activeTab.dataset.sectionIds || '[]'); } catch {}
+    if (!ids.length) return;
+    triggerAiReview(ids);
+  });
+
+  // ─── Diff Modal 渲染 ───
+  const modal = document.getElementById('ai-diff-modal');
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function renderDiffs(summary, changes) {
+    document.getElementById('ai-diff-summary').textContent = summary;
+    const listEl = document.getElementById('ai-diff-list');
+    if (!changes.length) {
+      listEl.innerHTML = '<div class="ai-diff-empty">🎉 AI 覺得目前腳本沒有需要修改的地方。</div>';
+    } else {
+      listEl.innerHTML = changes.map((ch, i) => `
+        <div class="ai-diff-item" data-change-idx="${i}">
+          <div class="ai-diff-item-head">
+            <label>
+              <input type="checkbox" class="ai-diff-check" data-change-idx="${i}" checked>
+              <span class="ai-diff-section">段落 ${ch.section_id}</span>
+              <span class="ai-diff-badge type-${ch.type || 'clarity'}">${ch.type || 'clarity'}</span>
+            </label>
+          </div>
+          <div class="ai-diff-reason">${escapeHtml(ch.reason || '')}</div>
+          <div class="ai-diff-before"><span class="ai-diff-label">原文</span>${escapeHtml(ch.before || '')}</div>
+          <div class="ai-diff-after"><span class="ai-diff-label">建議</span>${escapeHtml(ch.after || '')}</div>
+        </div>
+      `).join('');
+    }
+    window._aiChanges = changes;
+    modal.hidden = false;
+  }
+  const btnClose = document.getElementById('btn-diff-close');
+  if (btnClose) btnClose.addEventListener('click', () => { modal.hidden = true; });
+  const btnSelAll = document.getElementById('btn-diff-select-all');
+  if (btnSelAll) btnSelAll.addEventListener('click', () => {
+    document.querySelectorAll('.ai-diff-check').forEach(c => c.checked = true);
+  });
+  const btnSelNone = document.getElementById('btn-diff-select-none');
+  if (btnSelNone) btnSelNone.addEventListener('click', () => {
+    document.querySelectorAll('.ai-diff-check').forEach(c => c.checked = false);
+  });
+  const btnApply = document.getElementById('btn-diff-apply');
+  if (btnApply) btnApply.addEventListener('click', async () => {
+    const accepted = [];
+    document.querySelectorAll('.ai-diff-check').forEach(c => {
+      if (c.checked) {
+        const idx = +c.dataset.changeIdx;
+        if (window._aiChanges && window._aiChanges[idx]) accepted.push(window._aiChanges[idx]);
+      }
+    });
+    if (!accepted.length) { alert('請至少勾選一個變更'); return; }
+    btnApply.disabled = true;
+    btnApply.textContent = '套用中…';
+    try {
+      const resp = await fetch('/api/script/apply-changes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody({ accepted })),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        // 套用成功 → 重新載入頁面拿最新 narration
+        location.reload();
+      } else {
+        alert('套用失敗：' + (data.error || ''));
+        btnApply.disabled = false;
+        btnApply.textContent = '套用勾選的變更';
+      }
+    } catch (e) {
+      alert('網路錯誤：' + e);
+      btnApply.disabled = false;
+      btnApply.textContent = '套用勾選的變更';
+    }
+  });
+
+  // ─── Meta 編輯：標題 radio + tags / description / thumbnail ───
+  const metaTimers = new Map();
+  function setMetaStatus(key, text, cls) {
+    const el = document.querySelector(`[data-save-for="${key}"]`);
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'meta-save ' + (cls || '');
+  }
+  async function saveMeta(payload, keys) {
+    for (const k of keys) setMetaStatus(k, '💾 儲存中…', 'editing');
+    try {
+      const r = await fetch('/api/script/meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody(payload)),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        for (const k of keys) setMetaStatus(k, '✓ 已存', 'saved');
+        setTimeout(() => { for (const k of keys) setMetaStatus(k, '', ''); }, 1800);
+      } else {
+        for (const k of keys) setMetaStatus(k, '✕ ' + (d.error || '失敗'), 'error');
+      }
+    } catch (e) {
+      for (const k of keys) setMetaStatus(k, '✕ 網路錯誤', 'error');
+    }
+  }
+  // 標題 radio：改變即存
+  document.querySelectorAll('input[name="chosen_title"]').forEach(r => {
+    r.addEventListener('change', () => {
+      if (!r.checked) return;
+      saveMeta({ chosen_title: r.value }, ['chosen_title']);
+    });
+  });
+  // tags/description/thumbnail：失焦或 debounce 後存
+  document.querySelectorAll('.meta-editable').forEach(el => {
+    el.addEventListener('input', () => {
+      const key = el.dataset.meta;
+      setMetaStatus(key, '✎ 未儲存', 'editing');
+      if (metaTimers.has(key)) clearTimeout(metaTimers.get(key));
+      metaTimers.set(key, setTimeout(() => triggerSave(el), 1500));
+    });
+    el.addEventListener('blur', () => triggerSave(el));
+  });
+  function triggerSave(el) {
+    const key = el.dataset.meta;
+    let val = el.value;
+    let payload = {};
+    if (key === 'tags') {
+      payload.tags = val.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+    } else {
+      payload[key] = val;
+    }
+    saveMeta(payload, [key]);
+  }
+
+})();
+</script>
 {% endblock %}

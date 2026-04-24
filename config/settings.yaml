@@ -35,19 +35,41 @@ claude:
   temperature: 0.3
 
 tts:
-  engine: "xtts"  # "xtts" or "elevenlabs"
+  engine: "edge"  # "edge" | "xtts" | "elevenlabs"
+  # edge-tts 聲音（env EDGE_TTS_VOICE 優先）
+  # 可選：zh-TW-YunJheNeural（男）/ zh-TW-HsiaoChenNeural（女）/
+  #      zh-TW-HsiaoYuNeural（女，溫柔）/ zh-CN-YunxiNeural（男，電影感）/
+  #      zh-CN-YunjianNeural（男，播報風）
+  edge_tts_voice: "zh-TW-YunJheNeural"
   voice_sample: "voice_samples/processed/best_sample.wav"
   language: "zh-tw"
 
 comfyui:
   host: "http://localhost:8188"
-  default_model: "flux1-schnell"
+  default_model: "sd_xl_base_1.0.safetensors"
   steps: 4
 
 video:
   resolution: "1920x1080"
   fps: 30
   publish_time: "20:00"  # 台灣時間
+  # 每張靜圖最少停留秒數；若音訊較長則跟著音訊走
+  image_duration_seconds: 12
+  # 每幾秒換一支「不同的」B-roll 素材（不是裁切位置，是真的換 clip）
+  scene_secs: 10.0
+  # 字幕字級與底部邊距（ASS）
+  subtitle_fontsize: 72
+  subtitle_margin_v: 140
+
+broll:
+  # Pexels 素材下載開關；沒設 PEXELS_API_KEY 會自動退回 AI 生圖
+  enabled: true
+  # 單段 B-roll 時長上下限（過濾搜尋結果）
+  min_duration: 3
+  max_duration: 20
+
+thumbnail:
+  channel_label: "AI 商業觀察"
 
 youtube:
   channel_name: "AI 商業觀察"

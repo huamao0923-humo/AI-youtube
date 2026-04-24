@@ -1,0 +1,500 @@
+/* ============================================================
+   Shared Design Tokens — AI 頻道 × 倪師影片工作室
+   ------------------------------------------------------------
+   這份檔案是兩個專案共用的視覺語言（色票、字型、間距、共用元件）。
+   - AI youtube channel (Flask)  : 透過 /static/css/app.css import
+   - Ni-Legacy-AI (Gradio)       : 透過 studio.py / review_ui.py 的 launch(css=...) 注入
+   改動這份檔案會同時影響兩個專案。
+   ============================================================ */
+
+:root {
+  /* ── 背景層次 ── */
+  --bg:           #09090b;
+  --bg2:          #0d0d10;
+  --surface:      #111114;
+  --surface2:     #1a1a1f;
+  --surface3:     #232329;
+
+  /* ── 邊框 ── */
+  --border:       #27272d;
+  --border2:      #323238;
+
+  /* ── 文字 ── */
+  --text:         #f4f4f5;
+  --text2:        #a1a1aa;
+  --text3:        #71717a;
+
+  /* ── 品牌主色（紫） ── */
+  --accent:       #7c3aed;
+  --accent2:      #8b5cf6;
+  --accent-glow:  rgba(124, 58, 237, .15);
+
+  /* ── 狀態色 ── */
+  --green:        #22c55e;
+  --green-bg:     #052e16;
+  --green-border: #14532d;
+  --amber:        #f59e0b;
+  --amber-bg:     #451a03;
+  --red:          #ef4444;
+  --red-bg:       #450a0a;
+
+  /* ── 圓角 / 陰影 ── */
+  --radius:       10px;
+  --radius-lg:    16px;
+  --shadow:       0 1px 3px rgba(0, 0, 0, .5);
+  --shadow-lg:    0 8px 32px rgba(0, 0, 0, .6);
+
+  /* ── 字型 ── */
+  --font-sans:    -apple-system, "Microsoft JhengHei", "PingFang TC",
+                  "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:    "Fira Code", "Cascadia Code", "JetBrains Mono",
+                  Consolas, monospace;
+}
+
+/* ============================================================
+   Body / 全域 reset
+   ============================================================ */
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   共用元件：Button
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text3);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent2); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #6d28d9; }
+.btn-success { background: #15803d; color: #fff; }
+.btn-success:hover { background: #166534; }
+.btn-danger {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid #7f1d1d;
+}
+.btn-danger:hover { background: #5f1414; }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-lg { padding: 10px 20px; font-size: 14px; }
+
+/* ============================================================
+   共用元件：狀態徽章
+   ============================================================ */
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.status-ok   { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.status-err  { background: var(--red-bg);   color: var(--red); }
+.status-warn { background: var(--amber-bg); color: var(--amber); }
+
+/* ============================================================
+   共用元件：卡片 / Banner
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+.card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.banner-warn    { background: var(--amber-bg);   border: 1px solid #78350f;          color: var(--amber); }
+.banner-info    { background: var(--accent-glow); border: 1px solid #4c1d95;         color: var(--accent2); }
+.banner-success { background: var(--green-bg);   border: 1px solid var(--green-border); color: var(--green); }
+
+/* ============================================================
+   共用元件：Scrollbar
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ============================================================
+   共用元件：Code
+   ============================================================ */
+code {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent2);
+}
+
+/* ============================================================
+   共用元件：Stage Pill（流程階段顯示）
+   ── 倪師 review_ui 用，AI channel 未來也可用
+   ============================================================ */
+.stage-bar-wrapper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.stage-bar-sep {
+  color: var(--border2);
+  font-size: 14px;
+  margin: 0 2px;
+  user-select: none;
+}
+.stage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.stage-pill-num  { font-weight: 800; font-size: 13px; }
+.stage-pill-icon { font-size: 11px; }
+.stage-pill-count {
+  font-size: 10px;
+  opacity: .85;
+  font-variant-numeric: tabular-nums;
+}
+.stage-pill-done {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: var(--green-border);
+}
+.stage-pill-active {
+  background: var(--accent-glow);
+  color: var(--accent2);
+  border-color: #4c1d95;
+  animation: stagePulse 1.8s infinite;
+}
+.stage-pill-pending {
+  background: var(--surface2);
+  color: var(--text3);
+  border-color: var(--border2);
+}
+@keyframes stagePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .55; }
+}
+
+/* ============================================================
+   共用元件：Status Card（右上角狀態摘要）
+   ============================================================ */
+.status-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+.status-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text2);
+}
+.status-card-row + .status-card-row {
+  border-top: 1px solid var(--border);
+}
+.status-card-label { font-weight: 500; }
+
+/* ============================================================
+   共用元件：KPI Mini Grid（多欄小 KPI 卡）
+   ============================================================ */
+.kpi-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.kpi-mini {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.kpi-mini-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 4px;
+}
+.kpi-mini-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.kpi-value-accent { color: var(--accent2); }
+.kpi-value-green  { color: var(--green); }
+.kpi-value-amber  { color: var(--amber); }
+.kpi-value-red    { color: var(--red); }
+
+/* ============================================================
+   共用元件：Banner icon（snippets.banner 產出的 .banner-icon）
+   ============================================================ */
+.banner-icon {
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ============================================================
+   共用元件：Toast / Notification
+   ------------------------------------------------------------
+   兩邊都用。AI channel 的 Flask flash 訊息、倪師 Gradio 的
+   gr.Info/Warning/Error toast 都會長這樣。
+
+   用法：
+     HTML：<div class="toast-stack">
+             <div class="toast toast-success">...</div>
+           </div>
+     JS：一段小 script 讓 toast 5 秒後自動消失
+   ============================================================ */
+
+/* 右上角的 toast 堆疊容器 */
+.toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 380px;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: toastIn .25s ease-out;
+  position: relative;
+  min-width: 240px;
+  max-width: 380px;
+}
+
+.toast-icon {
+  font-size: 16px;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.toast-body {
+  flex: 1;
+  word-break: break-word;
+}
+
+.toast-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.toast-close {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--text3);
+  font-size: 15px;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.toast-close:hover { color: var(--text); }
+
+/* ── 四種狀態色 ── */
+.toast-success {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+  color: var(--green);
+}
+.toast-info {
+  background: var(--accent-glow);
+  border-color: #4c1d95;
+  color: var(--accent2);
+}
+.toast-warn {
+  background: var(--amber-bg);
+  border-color: #78350f;
+  color: var(--amber);
+}
+.toast-error {
+  background: var(--red-bg);
+  border-color: #7f1d1d;
+  color: var(--red);
+}
+
+/* 進入動畫 */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* 退出動畫（JS 加上 .toast-out class 時） */
+.toast.toast-out {
+  animation: toastOut .25s ease-in forwards;
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(16px); max-height: 0; padding: 0 16px; margin: 0; border: 0; }
+}
+
+/* ============================================================
+   共用元件：Form Input（AI channel × 倪師 共用）
+   ------------------------------------------------------------
+   單行 → .input、多行 → .input-area、下拉 → .input-select
+   尺寸：.input-sm / .input-lg
+   狀態：:focus / .is-error / :disabled
+   容器：.input-group → .input-label + input + .input-help/.input-error
+   ============================================================ */
+.input,
+.input-area,
+.input-select {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  line-height: 1.5;
+  transition: border-color .15s, box-shadow .15s, background-color .15s;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.input-area {
+  min-height: 80px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.input-select {
+  padding-right: 32px;
+  cursor: pointer;
+  /* 簡約的下拉箭頭 */
+  background-image: linear-gradient(45deg, transparent 50%, var(--text3) 50%),
+                    linear-gradient(135deg, var(--text3) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 14px, calc(100% - 12px) 14px;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.input::placeholder,
+.input-area::placeholder { color: var(--text3); }
+
+.input:focus,
+.input-area:focus,
+.input-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.input.is-error,
+.input-area.is-error,
+.input-select.is-error {
+  border-color: var(--red);
+  background: rgba(239, 68, 68, .05);
+}
+.input.is-error:focus,
+.input-area.is-error:focus,
+.input-select.is-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, .15);
+}
+
+.input:disabled,
+.input-area:disabled,
+.input-select:disabled {
+  background: var(--surface2);
+  color: var(--text3);
+  cursor: not-allowed;
+  opacity: .7;
+}
+
+/* 尺寸變體 */
+.input-sm  { padding: 6px 10px; font-size: 11px; border-radius: 6px; }
+.input-lg  { padding: 10px 14px; font-size: 14px; }
+
+/* 等寬字變體（給 JSON / Prompt / Code 類 textarea 使用） */
+.input-mono { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
+
+/* Field 容器：Label + Input + Help / Error */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.input-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.input-help {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.5;
+}
+.input-error {
+  font-size: 12px;
+  color: var(--red);
+  line-height: 1.5;
+  display: none;
+}
+.input-group.has-error .input-error { display: block; }
+.input-group.has-error .input-help  { display: none; }

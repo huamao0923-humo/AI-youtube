@@ -15,6 +15,14 @@
 
 <div class="content">
 
+  {% set is_today = (brief.date == (status.date or '')) %}
+  {% if not is_today and brief.date %}
+  <div class="banner banner-warn">
+    📅 目前顯示 <strong>{{ brief.date }}</strong> 的資料，非今日內容。
+    <a href="/" style="text-decoration:underline">返回今日選題</a>
+  </div>
+  {% endif %}
+
   {% if status.stage == 'selected' or status.stage == 'done' %}
   <div class="banner banner-success">
     ✅ 已選題完成 →
@@ -32,6 +40,15 @@
   <div class="section-label">候選新聞</div>
   <div class="cards">
 
+  {% if brief.candidates | length == 0 %}
+  <div class="card" style="text-align:center;padding:40px 20px;color:var(--text3)">
+    <p>{% if is_today %}尚無推薦候選新聞{% else %}該日無推薦新聞{% endif %}</p>
+    {% if not is_today %}
+    <a href="/" style="color:var(--link)">返回今日選題</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% for item in brief.candidates %}
   <div class="card">
     <div class="card-header">
@@ -46,6 +63,18 @@
         </div>
       </div>
       <div class="score">{{ '%.1f'|format(item.ai_score) }}</div>
+    </div>
+
+    <div class="card-badges">
+      {% set tl = item.timeliness_label | default('fresh') %}
+      <span class="badge badge-{{ tl }}">{% if tl == 'fresh' %}新鮮{% elif tl == 'aging' %}老化 ⚠️{% else %}過舊 🚨{% endif %}</span>
+      {% if item.timeliness_days is not none %}<span class="badge-days">{{ item.timeliness_days }}天前</span>{% endif %}
+      {% if (item.cluster_size | default(1)) > 1 %}
+      <span class="badge badge-cluster" title="{{ item.cluster_peer_titles | default([]) | join(' / ') }}">🔗 相似 {{ item.cluster_size }}篇</span>
+      {% endif %}
+      <span class="badge badge-score" title="熱度：trending 潛力">🔥 {{ item.heat_score | default('—') }}/10</span>
+      <span class="badge badge-score" title="知識性：教育深度">📚 {{ item.knowledge_score | default('—') }}/10</span>
+      <span class="badge badge-score" title="商業價值：商業影響力">💼 {{ item.commercial_score | default('—') }}/10</span>
     </div>
 
     <div class="card-body">
@@ -76,7 +105,7 @@
         </div>
 
         <div class="select-row">
-          <input type="text" name="custom_note" placeholder="補充說明或自訂角度（可留空）">
+          <input type="text" class="input" name="custom_note" placeholder="補充說明或自訂角度（可留空）">
           <button type="submit" class="btn btn-primary">選這則 →</button>
         </div>
       </form>

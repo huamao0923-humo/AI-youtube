@@ -5,12 +5,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from collections import defaultdict, deque
+from datetime import datetime, timezone, timedelta
 from modules.common.utils import tw_today
 from pathlib import Path
 from typing import Any
 
-from modules.common.config import PROJECT_ROOT, settings
+from modules.common.config import PROJECT_ROOT, settings, keywords
 from modules.common.logging_setup import setup_logger
 from modules.database import db_manager
 
@@ -18,22 +19,176 @@ setup_logger()
 
 BRIEF_DIR = PROJECT_ROOT / "data" / "briefs"
 
+_KNOWLEDGE_KW = [
+    "research", "paper", "benchmark", "fine-tuning", "training",
+    "open source", "api", "multimodal", "architecture", "inference",
+    "model weights", "dataset",
+]
+_COMMERCIAL_KW = [
+    "$", "billion", "million", "funding", "acquisition", "revenue",
+    "ipo", "valuation", "enterprise", "partnership", "customers",
+    "market share", "competitor",
+]
+_COUNT_SCALE = {0: 1, 1: 3, 2: 5, 3: 7, 4: 8}
 
-def generate(top_n: int = 5) -> dict[str, Any]:
-    """從候選池取前 N 則，生成結構化 Daily Brief。"""
+
+def _scale_count(n: int) -> int:
+    return _COUNT_SCALE.get(n, 10)
+
+
+def _compute_timeliness(published_at: str | None) -> dict[str, Any]:
+    fallback = {"timeliness_days": None, "timeliness_label": "fresh", "timeliness_warning": False}
+    if not published_at:
+        return fallback
+    try:
+        pub = datetime.fromisoformat(str(published_at))
+    except ValueError:
+        try:
+            from datetime import date
+            d = date.fromisoformat(str(published_at)[:10])
+            pub = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+        except ValueError:
+            return fallback
+    if pub.tzinfo is None:
+        pub = pub.replace(tzinfo=timezone.utc)
+    days = max(0, (datetime.now(timezone.utc) - pub).days)
+    if days < 7:
+        label, warning = "fresh", False
+    elif days <= 14:
+        label, warning = "aging", True
+    else:
+        label, warning = "stale", True
+    return {"timeliness_days": days, "timeliness_label": label, "timeliness_warning": warning}
+
+
+def _compute_three_scores(row: dict[str, Any], cluster_size: int, timeliness_days: int | None) -> dict[str, int]:
+    text = " ".join(filter(None, [
+        row.get("title", ""), row.get("summary", ""), row.get("business_angle", ""),
+    ])).lower()
+
+    base = round((row.get("ai_score") or 0) * 0.5)
+    heat = base + min(cluster_size - 1, 3)
+    if timeliness_days is not None:
+        heat += 2 if timeliness_days < 3 else (1 if timeliness_days < 7 else 0)
+    heat = max(1, min(10, heat))
+
+    k_count = sum(1 for kw in _KNOWLEDGE_KW if kw in text)
+    c_count = sum(1 for kw in _COMMERCIAL_KW if kw in text)
+
+    return {
+        "heat_score": heat,
+        "knowledge_score": _scale_count(k_count),
+        "commercial_score": _scale_count(c_count),
+    }
+
+
+def _extract_entities(row: dict[str, Any]) -> set[str]:
+    kw = keywords()
+    text = " ".join(filter(None, [row.get("title", ""), row.get("summary", "")])).lower()
+    entities: set[str] = set()
+    for tier in kw.get("target_companies", {}).values():
+        for name in tier:
+            if name.lower() in text:
+                entities.add(name.lower())
+    for kw_str in kw.get("high_value_keywords", {}).get("tier1_score_5", []):
+        if kw_str.lower() in text:
+            entities.add(kw_str.lower())
+    return entities
+
+
+def build_entity_components(items: list[dict[str, Any]]) -> list[set[int]]:
+    """BFS 連通分量 — 以共同 entity 為邊的圖分群。供 brief + topic_clusterer 共用。"""
+    if not items:
+        return []
+    ids = [item["id"] for item in items]
+    entity_map = {item["id"]: _extract_entities(item) for item in items}
+
+    adj: dict[int, set[int]] = defaultdict(set)
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            if entity_map[a] & entity_map[b]:
+                adj[a].add(b)
+                adj[b].add(a)
+
+    visited: set[int] = set()
+    components: list[set[int]] = []
+    for nid in ids:
+        if nid in visited:
+            continue
+        comp: set[int] = set()
+        q = deque([nid])
+        while q:
+            cur = q.popleft()
+            if cur in visited:
+                continue
+            visited.add(cur)
+            comp.add(cur)
+            q.extend(adj[cur] - visited)
+        components.append(comp)
+    return components
+
+
+def _cluster_candidates(items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not items:
+        return items, []
+
+    id_to_item = {item["id"]: item for item in items}
+    components = build_entity_components(items)
+
+    score_lookup = {item["id"]: (item.get("ai_score") or 0) for item in items}
+    topic_clusters = []
+    for comp in sorted(components, key=lambda c: (-len(c), -max(score_lookup[i] for i in c))):
+        rep_id = max(comp, key=lambda i: score_lookup[i])
+        topic_clusters.append({
+            "cluster_id": str(rep_id),
+            "size": len(comp),
+            "representative_id": rep_id,
+            "member_ids": sorted(comp),
+        })
+
+    comp_map: dict[int, set[int]] = {}
+    for comp in components:
+        for nid in comp:
+            comp_map[nid] = comp
+
+    for item in items:
+        comp = comp_map[item["id"]]
+        rep_id = max(comp, key=lambda i: score_lookup[i])
+        peers = [i for i in comp if i != item["id"]]
+        item["cluster_id"] = str(rep_id)
+        item["cluster_size"] = len(comp)
+        item["cluster_peers"] = peers
+        item["cluster_peer_titles"] = [
+            id_to_item[i].get("suggested_title") or id_to_item[i].get("title", "")
+            for i in peers
+        ]
+
+    return items, topic_clusters
+
+
+def generate(top_n: int = 5, fetched_date: str | None = None) -> dict[str, Any]:
+    """從候選池取前 N 則，生成結構化 Daily Brief。
+
+    fetched_date: 限定爬取日期（YYYY-MM-DD），預設今日台灣時間。
+                  傳入空字串 "" 表示不篩選（顯示所有日期）。
+    """
     BRIEF_DIR.mkdir(parents=True, exist_ok=True)
     db_manager.init_db()
+
+    if fetched_date is None:
+        # 預設取最新一批爬取資料（fetched_at 為 UTC，避免時區偏移誤判）
+        fetched_date = db_manager.get_latest_fetch_date() or ""
 
     candidates = db_manager.fetch_candidates(
         min_score=settings()["filter"]["ai_score_min"],
         limit=top_n,
+        fetched_date=fetched_date or None,
     )
 
     today = tw_today()
     items = []
 
     for rank, row in enumerate(candidates, 1):
-        # 產生 3 個建議角度
         title = row["suggested_title"] or row["title"]
         angles = _suggest_angles(row)
 
@@ -41,6 +196,7 @@ def generate(top_n: int = 5) -> dict[str, Any]:
             "rank": rank,
             "id": row["id"],
             "title": row["title"],
+            "summary": row.get("summary", ""),
             "source_name": row["source_name"],
             "published_at": row["published_at"],
             "ai_score": row["ai_score"],
@@ -48,13 +204,30 @@ def generate(top_n: int = 5) -> dict[str, Any]:
             "why_audience_cares": row["why_audience_cares"],
             "suggested_title": title,
             "angles": angles,
-            "url": None,  # 若需要原文連結可另查
+            "url": None,
         })
+
+    # 時效（無相依）
+    for item in items:
+        item.update(_compute_timeliness(item.get("published_at")))
+
+    # 主題聚合（需整個 items list）
+    items, topic_clusters = _cluster_candidates(items)
+
+    # 三維評分（需 cluster_size + timeliness_days）
+    for item in items:
+        item.update(_compute_three_scores(
+            row=item,
+            cluster_size=item["cluster_size"],
+            timeliness_days=item.get("timeliness_days"),
+        ))
 
     brief = {
         "date": today,
+        "fetched_date": fetched_date or "all",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "candidates": items,
+        "topic_clusters": topic_clusters,
         "quick_news": _fetch_quick_news(exclude_ids=[r["id"] for r in candidates]),
     }
 

@@ -31,6 +31,22 @@ data/images/*
 data/videos/*
 !data/videos/.gitkeep
 
+# B-roll 影片素材快取
+data/broll_cache/
+# 其他暫存目錄
+data/preview/
+data/narrations.txt
+
+# DB 備份
+data/*.db.bak
+
+# TTS 測試輸出
+tts_test_*.mp3
+
+# 根目錄暫存輸出
+err.txt
+out.txt
+
 # 日誌
 logs/*
 !logs/.gitkeep

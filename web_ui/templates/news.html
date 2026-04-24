@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}新聞工作台{% endblock %}
+
+{% block head %}
+<style>
+/* ── 流程步驟器 ── */
+.nw-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 22px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+}
+.nw-step {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 140px;
+  padding: 4px 10px;
+}
+.nw-step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  background: var(--accent2, #8b5cf6); color: #fff;
+  border-radius: 50%;
+  font-size: 12px; font-weight: 800;
+  margin-bottom: 4px;
+}
+.nw-step-label { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+.nw-step-sub   { font-size: 12px; color: var(--text3, #71717a); line-height: 1.5; }
+.nw-step-arrow {
+  display: flex; align-items: center;
+  font-size: 20px; color: var(--text3, #71717a);
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+
+/* ── 4 個行動卡片 ── */
+.nw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.nw-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: all .15s;
+  cursor: pointer;
+}
+.nw-card:hover {
+  border-color: var(--accent2, #8b5cf6);
+  background: rgba(139, 92, 246, 0.06);
+  transform: translateY(-1px);
+}
+.nw-card.urgent {
+  border-color: rgba(245,158,11,0.55);
+  background: rgba(245,158,11,0.06);
+}
+.nw-card.urgent:hover {
+  border-color: #fbbf24;
+  background: rgba(245,158,11,0.1);
+}
+.nw-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.nw-card-step {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3, #71717a);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.nw-card.urgent .nw-card-step { color: #fbbf24; }
+.nw-card-icon { font-size: 22px; }
+.nw-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.nw-card-num {
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent2, #8b5cf6);
+  line-height: 1;
+}
+.nw-card.urgent .nw-card-num { color: #fbbf24; }
+.nw-card.neutral .nw-card-num { color: var(--text); }
+.nw-card-meta {
+  font-size: 12px;
+  color: var(--text3, #71717a);
+  line-height: 1.5;
+}
+
+/* ── 操作說明 ── */
+.nw-guide {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+.nw-guide h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+.nw-guide ol { padding-left: 20px; margin: 0; }
+.nw-guide li {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text2, #d4d4d8);
+  margin-bottom: 4px;
+}
+.nw-guide li strong { color: var(--text); }
+.nw-guide code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--surface2, #1a1a1f);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--accent2, #8b5cf6);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>📰 新聞工作台</h1>
+    <span class="sub">從爬蟲到選題，一站式管理</span>
+  </div>
+  <div class="topbar-actions">
+    <a href="/" class="btn btn-ghost">🏠 儀表板</a>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── 流程步驟器 ── -->
+  <div class="nw-stepper">
+    <div class="nw-step">
+      <div class="nw-step-num">1</div>
+      <div class="nw-step-label">評分</div>
+      <div class="nw-step-sub">匯出未評分清單、交給 Claude Code 打分、匯入</div>
+    </div>
+    <div class="nw-step-arrow">→</div>
+    <div class="nw-step">
+      <div class="nw-step-num">2</div>
+      <div class="nw-step-label">聚類</div>
+      <div class="nw-step-sub">相關新聞自動組成主題（也可手動合併、拆分）</div>
+    </div>
+    <div class="nw-step-arrow">→</div>
+    <div class="nw-step">
+      <div class="nw-step-num">3</div>
+      <div class="nw-step-label">開集</div>
+      <div class="nw-step-sub">從主題或儀表板 Trending 點擊 → 製作集數</div>
+    </div>
+  </div>
+
+  <!-- ── 4 個行動卡片 ── -->
+  <div class="nw-grid">
+    <a href="/scoring" class="nw-card {% if ds.unscored > 0 %}urgent{% endif %}">
+      <div class="nw-card-head">
+        <span class="nw-card-step">Step 1 · 評分</span>
+        <span class="nw-card-icon">⭐</span>
+      </div>
+      <div class="nw-card-title">新聞評分</div>
+      <div class="nw-card-num">{{ ds.unscored or 0 }}</div>
+      <div class="nw-card-meta">
+        {% if ds.unscored > 0 %}則待評分 · 請優先處理
+        {% else %}則待評分 · 目前全部已評分 ✓{% endif %}
+      </div>
+    </a>
+
+    <a href="/topics" class="nw-card">
+      <div class="nw-card-head">
+        <span class="nw-card-step">Step 2 · 聚類</span>
+        <span class="nw-card-icon">🧩</span>
+      </div>
+      <div class="nw-card-title">主題聚類</div>
+      <div class="nw-card-num">{{ ds.open_topics or 0 }}</div>
+      <div class="nw-card-meta">個 open 主題 · 點擊瀏覽、合併、開集</div>
+    </a>
+
+    <a href="/all-news" class="nw-card neutral">
+      <div class="nw-card-head">
+        <span class="nw-card-step">補充 · 瀏覽</span>
+        <span class="nw-card-icon">📡</span>
+      </div>
+      <div class="nw-card-title">新聞池</div>
+      <div class="nw-card-num">{{ ds.total_today or 0 }}</div>
+      <div class="nw-card-meta">今日爬量 · 逐篇瀏覽、手動推薦到 Brief</div>
+    </a>
+
+    <a href="/news-dates" class="nw-card neutral">
+      <div class="nw-card-head">
+        <span class="nw-card-step">工具 · 日誌</span>
+        <span class="nw-card-icon">🗂️</span>
+      </div>
+      <div class="nw-card-title">爬蟲日誌</div>
+      <div class="nw-card-num">{{ total_days or 0 }}</div>
+      <div class="nw-card-meta">日爬取記錄 · 可按日清除舊資料 / 重新整理</div>
+    </a>
+  </div>
+
+  <!-- ── 操作說明 ── -->
+  <div class="nw-guide">
+    <h3>💡 新手操作指南</h3>
+    <ol>
+      <li><strong>每天早上先看「評分」</strong> — 若有待評分，先執行 CoWork 評分：匯出 JSON → 交給 Claude Code → 匯入分數。<code>ai_score ≥ 6</code> 會自動標記為候選。</li>
+      <li><strong>評分完成後開「聚類」</strong> — 系統根據共同 entity（公司、技術）自動把相關新聞組成主題。你也可手動合併相似主題或拆分。</li>
+      <li><strong>直接從「儀表板」Trending Topics 開集</strong> — 點擊熱門主題 → 製作集數，是最快的路徑。「主題聚類」頁則是拿來深入檢視或調整分群。</li>
+      <li><strong>「新聞池」</strong>是今天所有爬回來的新聞（含未評分、候選、已用），適合找漏網之魚手動推薦到 Brief。</li>
+      <li><strong>「爬蟲日誌」</strong>是工具頁：看各日期爬取統計、按日清除舊資料。一般不需天天用。</li>
+    </ol>
+  </div>
+
+</div>
+{% endblock %}
