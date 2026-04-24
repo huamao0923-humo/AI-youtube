@@ -1,0 +1,83 @@
+# AI 模型評測分數 — 手動維護，供戰情室「評測排行」面板
+#
+# 欄位：
+#   model       模型名（顯示用）
+#   lmarena     LMArena Elo 分數（整數）
+#   mmlu        MMLU 準確率 % （浮點）
+#   humaneval   HumanEval pass@1 %
+#   source_url  來源連結（LMArena leaderboard 快照）
+#   updated_at  錨點資料更新日（YYYY-MM-DD）
+#
+# 維護節奏：每月更新一次；太舊的分數會降低面板可信度。
+# 資料僅為對外展示錨點，非即時榜單。
+
+benchmarks:
+  - model: GPT-5
+    lmarena: 1410
+    mmlu: 92.3
+    humaneval: 92.5
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Claude 4.6 Sonnet
+    lmarena: 1398
+    mmlu: 89.8
+    humaneval: 93.1
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Gemini 2.5 Pro
+    lmarena: 1385
+    mmlu: 88.9
+    humaneval: 89.4
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Grok 4
+    lmarena: 1365
+    mmlu: 87.1
+    humaneval: 86.2
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Llama 4 405B
+    lmarena: 1352
+    mmlu: 86.3
+    humaneval: 85.0
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Mistral Large 3
+    lmarena: 1340
+    mmlu: 84.5
+    humaneval: 83.9
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Command R+ 08-2024
+    lmarena: 1295
+    mmlu: 82.1
+    humaneval: 78.5
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: GPT-4o
+    lmarena: 1340
+    mmlu: 88.7
+    humaneval: 90.2
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Claude 3.5 Sonnet
+    lmarena: 1330
+    mmlu: 88.3
+    humaneval: 92.0
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"
+
+  - model: Phi-4
+    lmarena: 1260
+    mmlu: 84.8
+    humaneval: 82.6
+    source_url: https://lmarena.ai/leaderboard
+    updated_at: "2026-04-01"

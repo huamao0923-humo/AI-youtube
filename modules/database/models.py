@@ -67,6 +67,10 @@ class NewsItem(Base):
     category        = Column(String(32), index=True)  # ai_model|business|policy|product|semiconductor|other
     topic_id        = Column(Integer, index=True)     # FK → topics.id（nullable）
     classified_at   = Column(String(64))              # 重分類偵測
+    # AI 戰情室欄位
+    is_ai           = Column(Integer, index=True, default=0)   # 0/1 快篩
+    ai_company      = Column(String(32), index=True)           # openai|anthropic|gdeepmind|meta|xai|...
+    model_release   = Column(Integer, default=0)               # 0/1，命中 GPT-\d / Claude \d 等
 
 
 class Episode(Base):
@@ -196,6 +200,18 @@ class Topic(Base):
     heat_updated_at = Column(String(64))
 
 
+class AiUsedMark(Base):
+    """AI 戰情室「已用」標記 — 選題時寫入，用於灰化已處理過的新聞 / topic。"""
+    __tablename__ = "ai_used_marks"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    entity_type   = Column(String(16), nullable=False, index=True)  # 'news' | 'topic'
+    entity_id     = Column(String(200), nullable=False, index=True) # news_id 或 topic_slug
+    used_in_slug  = Column(String(200))                             # EpisodeStatus.slug 或 'skip_YYYYMMDD'
+    marked_at     = Column(String(64), nullable=False)
+    marked_by     = Column(String(64))                              # 多使用者預留
+
+
 class TopicHeatSnapshot(Base):
     """主題熱度歷史快照 — 一天一列 × topic 數，供時間軸與 7 日趨勢。"""
     __tablename__ = "topic_heat_snapshot"
@@ -241,6 +257,10 @@ def _migrate_columns() -> None:
             ("category", "VARCHAR(32)"),
             ("topic_id", "INTEGER"),
             ("classified_at", "VARCHAR(64)"),
+            # AI 戰情室
+            ("is_ai", "INTEGER"),
+            ("ai_company", "VARCHAR(32)"),
+            ("model_release", "INTEGER"),
         ],
         "episode_status": [
             ("selected_topic_id", "INTEGER"),

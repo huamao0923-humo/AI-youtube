@@ -1,0 +1,191 @@
+# AI 戰情室追蹤對象 — 美系前沿實驗室 + 雲端/晶片巨頭 + 研究社群
+#
+# 欄位說明：
+#   key       匹配鍵（寫入 NewsItem.ai_company）
+#   name      顯示名
+#   logo      Simple Icons CDN URL（免自存 logo）
+#   aliases   匹配別名（全小寫，對 title+summary 做 substring 匹配；regex 用 /.../ 包裹）
+#   group     frontier_lab | cloud_chip | research
+#
+# 匹配策略：按 list 順序由上而下，第一個命中即停。別名愈具體愈靠前。
+
+companies:
+  # ===== 前沿實驗室 =====
+  - key: openai
+    name: OpenAI
+    logo: https://cdn.simpleicons.org/openai
+    group: frontier_lab
+    aliases:
+      - openai
+      - chatgpt
+      - gpt-4
+      - gpt-5
+      - gpt-6
+      - sam altman
+      - sora
+      - /\bdall[\s\-]?e\b/i
+  - key: anthropic
+    name: Anthropic
+    logo: https://cdn.simpleicons.org/anthropic
+    group: frontier_lab
+    aliases:
+      - anthropic
+      - claude
+      - dario amodei
+      - /\bclaude\s*\d/i
+  - key: gdeepmind
+    name: Google DeepMind
+    logo: https://cdn.simpleicons.org/googledeepmind
+    group: frontier_lab
+    aliases:
+      - deepmind
+      - google deepmind
+      - gemini
+      - demis hassabis
+      - alphafold
+      - alphago
+  - key: meta_ai
+    name: Meta AI
+    logo: https://cdn.simpleicons.org/meta
+    group: frontier_lab
+    aliases:
+      - meta ai
+      - llama
+      - /\bllama\s*\d/i
+      - yann lecun
+      - fair lab
+  - key: xai
+    name: xAI
+    logo: https://cdn.simpleicons.org/x
+    group: frontier_lab
+    aliases:
+      - xai
+      - grok
+      - /\bgrok\s*\d/i
+  - key: mistral
+    name: Mistral AI
+    logo: https://cdn.simpleicons.org/mistralai
+    group: frontier_lab
+    aliases:
+      - mistral ai
+      - mistral
+      - mixtral
+  - key: cohere
+    name: Cohere
+    logo: https://cdn.simpleicons.org/cohere
+    group: frontier_lab
+    aliases:
+      - cohere
+      - command r
+      - aidan gomez
+  - key: inflection
+    name: Inflection AI
+    logo: https://cdn.simpleicons.org/inflection
+    group: frontier_lab
+    aliases:
+      - inflection ai
+      - inflection.ai
+      - pi.ai
+      - mustafa suleyman
+
+  # ===== 雲端 / 晶片巨頭 =====
+  - key: msft
+    name: Microsoft
+    logo: https://cdn.simpleicons.org/microsoft
+    group: cloud_chip
+    aliases:
+      - microsoft
+      - azure ai
+      - copilot
+      - satya nadella
+      - /\bm365\s*copilot\b/i
+  - key: google
+    name: Google
+    logo: https://cdn.simpleicons.org/google
+    group: cloud_chip
+    aliases:
+      - google cloud
+      - google ai
+      - /\bvertex\s*ai\b/i
+      - sundar pichai
+      - /\bnotebooklm\b/i
+  - key: aws
+    name: Amazon AWS
+    logo: https://cdn.simpleicons.org/amazonaws
+    group: cloud_chip
+    aliases:
+      - aws
+      - amazon bedrock
+      - amazon web services
+      - /\btrainium\b/i
+      - /\binferentia\b/i
+  - key: nvidia
+    name: NVIDIA
+    logo: https://cdn.simpleicons.org/nvidia
+    group: cloud_chip
+    aliases:
+      - nvidia
+      - jensen huang
+      - blackwell
+      - hopper
+      - /\bgb200\b/i
+      - /\bh100\b/i
+      - /\bh200\b/i
+  - key: amd
+    name: AMD
+    logo: https://cdn.simpleicons.org/amd
+    group: cloud_chip
+    aliases:
+      - amd
+      - instinct mi
+      - /\bmi300\b/i
+      - /\bmi325\b/i
+      - lisa su
+  - key: apple
+    name: Apple
+    logo: https://cdn.simpleicons.org/apple
+    group: cloud_chip
+    aliases:
+      - apple intelligence
+      - /\bapple\s*ai\b/i
+      - tim cook
+      - /\bm\d\s*chip\b/i
+  - key: oracle
+    name: Oracle
+    logo: https://cdn.simpleicons.org/oracle
+    group: cloud_chip
+    aliases:
+      - oracle cloud
+      - oracle ai
+      - larry ellison
+
+  # ===== 研究 / 社群 =====
+  - key: hf
+    name: HuggingFace
+    logo: https://cdn.simpleicons.org/huggingface
+    group: research
+    aliases:
+      - huggingface
+      - hugging face
+      - clem delangue
+  - key: arxiv
+    name: arXiv
+    logo: https://cdn.simpleicons.org/arxiv
+    group: research
+    aliases:
+      - arxiv
+      - /\barxiv\.org\b/i
+  - key: pwc
+    name: Papers With Code
+    logo: https://cdn.simpleicons.org/paperswithcode
+    group: research
+    aliases:
+      - papers with code
+      - paperswithcode
+  - key: gh
+    name: GitHub Trending
+    logo: https://cdn.simpleicons.org/github
+    group: research
+    aliases:
+      - github trending
+      - github.com/trending

@@ -268,6 +268,15 @@ def select_topic_from_topic():
     # 狀態更新：Topic 標 used
     db_manager.update_topic(topic_id, status="used")
 
+    # AI 戰情室：同步標記已用
+    try:
+        from modules.ai_war_room.used_marks import mark_news_used, mark_topic_used
+        mark_topic_used(topic_id, slug)
+        for nid in news_ids:
+            mark_news_used(nid, slug)
+    except Exception:
+        pass
+
     flash(f"已開集：{topic['title']}", "success")
     return redirect(url_for("episode_page", slug=slug))
 
@@ -302,6 +311,14 @@ def select_topic():
                                    selected_id=news_id,
                                    selected_angle=angle,
                                    custom_note=note)
+
+    # AI 戰情室：同步標記已用
+    try:
+        from modules.ai_war_room.used_marks import mark_news_used
+        mark_news_used(news_id, slug)
+    except Exception:
+        pass
+
     return redirect(url_for("episode_page", slug=slug))
 
 
@@ -1351,6 +1368,320 @@ def api_radar():
         }
 
     return jsonify(_cached("radar:today", _produce))
+
+
+# ─────────── AI 戰情室 ───────────
+
+@app.route("/ai")
+def ai_war_room_public():
+    """AI 新聞戰情室（公開版） — 不需登入。"""
+    return render_template("ai_war_room_public.html")
+
+
+@app.route("/admin/ai-war-room")
+@login_required
+def ai_war_room_admin():
+    """AI 新聞戰情室（內部版） — 選題工具。"""
+    return render_template("ai_war_room_admin.html", active="ai_war_room")
+
+
+def _ai_parse_published(dt_str: str | None):
+    """把 published_at 轉為 datetime；失敗回 None。"""
+    from datetime import datetime
+    if not dt_str:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z",
+                "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(dt_str, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _ai_feed_tag(row) -> str:
+    """把 NewsItem 分到 product / funding / partnership / research / policy / other。"""
+    import re
+    title = (row.title or "").lower()
+    cat = (row.category or "").lower()
+    src = (row.source_name or "").lower()
+    # research：arXiv / PWC / HF Papers
+    if "arxiv" in src or "papers" in src or "huggingface" in src:
+        return "research"
+    if cat == "policy":
+        return "policy"
+    if cat == "product" or any(k in title for k in ("launches", "releases", "announces", "unveils", "introduces", "發布", "推出", "上線")):
+        return "product"
+    if any(k in title for k in ("raises", "funding", "series ", "valuation", "ipo", "acquires", "acquisition", "融資", "併購", "收購")):
+        return "funding"
+    if any(k in title for k in ("partners with", "partnership", "teams up", "collaborat", "合作", "聯手")):
+        return "partnership"
+    return "other"
+
+
+@app.route("/api/ai/latest-news")
+def api_ai_latest_news():
+    """最新 AI 新聞流。可依 feed 過濾。"""
+    from modules.database.models import NewsItem, SessionLocal
+    try:
+        limit = max(1, min(100, int(request.args.get("limit", 40))))
+    except ValueError:
+        limit = 40
+    feed = (request.args.get("feed") or "all").strip().lower()
+
+    def _produce():
+        with SessionLocal() as s:
+            rows = (
+                s.query(NewsItem)
+                .filter(NewsItem.is_ai == 1)
+                .order_by(NewsItem.published_at.desc().nullslast(),
+                          NewsItem.fetched_at.desc().nullslast())
+                .limit(400)  # 取較多以便 feed 過濾後還夠
+                .all()
+            )
+            out = []
+            for r in rows:
+                tag = _ai_feed_tag(r)
+                if feed != "all" and tag != feed:
+                    continue
+                out.append({
+                    "id": r.id,
+                    "title": r.title,
+                    "url": r.url,
+                    "source": r.source_name,
+                    "published_at": r.published_at,
+                    "company": r.ai_company,
+                    "category": r.category,
+                    "feed_tag": tag,
+                    "ai_score": r.ai_score,
+                })
+                if len(out) >= limit:
+                    break
+            return out
+
+    return jsonify(_cached(f"ai:news:{feed}:{limit}", _produce))
+
+
+@app.route("/api/ai/company-activity")
+def api_ai_company_activity():
+    """各公司最新動作 + 24h / 7d 計數。"""
+    from datetime import datetime, timedelta, timezone
+    from modules.ai_war_room.company_matcher import CompanyMatcher
+    from modules.database.models import NewsItem, SessionLocal
+    from sqlalchemy import func
+
+    def _produce():
+        matcher = CompanyMatcher.load()
+        meta = {c["key"]: c for c in matcher.all_companies()}
+        now = datetime.now(timezone.utc)
+        cut_24h = (now - timedelta(hours=24)).isoformat()
+        cut_7d = (now - timedelta(days=7)).isoformat()
+
+        with SessionLocal() as s:
+            # 各公司最新一則
+            rows = (
+                s.query(NewsItem)
+                .filter(NewsItem.is_ai == 1, NewsItem.ai_company.isnot(None))
+                .order_by(NewsItem.published_at.desc().nullslast(),
+                          NewsItem.fetched_at.desc().nullslast())
+                .all()
+            )
+            latest_by_company: dict = {}
+            count_24h: dict = {}
+            count_7d: dict = {}
+            for r in rows:
+                k = r.ai_company
+                if k not in latest_by_company:
+                    latest_by_company[k] = {
+                        "title": r.title,
+                        "url": r.url,
+                        "published_at": r.published_at,
+                        "source": r.source_name,
+                    }
+                anchor = r.published_at or r.fetched_at or ""
+                if anchor >= cut_7d:
+                    count_7d[k] = count_7d.get(k, 0) + 1
+                if anchor >= cut_24h:
+                    count_24h[k] = count_24h.get(k, 0) + 1
+
+            result = []
+            for key, info in meta.items():
+                result.append({
+                    "company_key": key,
+                    "name": info.get("name"),
+                    "logo": info.get("logo"),
+                    "group": info.get("group"),
+                    "latest": latest_by_company.get(key),
+                    "count_24h": count_24h.get(key, 0),
+                    "count_7d": count_7d.get(key, 0),
+                })
+            # 按 count_7d 排序
+            result.sort(key=lambda x: (-x["count_7d"], -x["count_24h"], x["name"] or ""))
+            return result
+
+    return jsonify(_cached("ai:companies", _produce))
+
+
+@app.route("/api/ai/trending-topics")
+def api_ai_trending_topics():
+    """AI 熱門 topic + title tokenize wordcloud。"""
+    import re
+    from datetime import datetime, timedelta, timezone
+    from collections import Counter
+    from modules.database.models import NewsItem, SessionLocal, Topic
+    from sqlalchemy import func
+
+    window = (request.args.get("window") or "24h").strip().lower()
+    hours = 24 if window == "24h" else (24 * 7)
+
+    def _produce():
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+        with SessionLocal() as s:
+            # Topic 排行：有 news.is_ai=1 的 topic，按命中 AI 新聞數排
+            topic_rows = (
+                s.query(Topic, func.count(NewsItem.id).label("cnt"))
+                .join(NewsItem, NewsItem.topic_id == Topic.id)
+                .filter(NewsItem.is_ai == 1,
+                        (NewsItem.published_at >= cutoff) | (NewsItem.fetched_at >= cutoff))
+                .group_by(Topic.id)
+                .order_by(func.count(NewsItem.id).desc())
+                .limit(10)
+                .all()
+            )
+            topics = []
+            for t, cnt in topic_rows:
+                pct, arrow = _compute_arrow(t.heat_index or 0, t.heat_prev or 0)
+                topics.append({
+                    "topic_id": t.id, "slug": t.slug, "title": t.title,
+                    "heat": round(t.heat_index or 0, 3),
+                    "news_count": int(cnt), "arrow": arrow, "heat_delta_pct": pct,
+                    "category": t.category,
+                })
+
+            # WordCloud：從窗口內 AI 新聞 title tokenize
+            titles = (
+                s.query(NewsItem.title)
+                .filter(NewsItem.is_ai == 1,
+                        (NewsItem.published_at >= cutoff) | (NewsItem.fetched_at >= cutoff))
+                .limit(1500)
+                .all()
+            )
+
+        # 簡易 tokenizer：英文 word ≥ 3 字；中文 2~4 字詞靠既有 keyword yaml 若存在
+        stop = {"the","a","an","and","or","of","to","in","for","on","with","at","by","is","are","be",
+                "this","that","from","as","it","its","was","were","into","new","more","how","why",
+                "will","can","has","have","but","not","you","your","our","their","his","her",
+                "也","與","和","或","的","了","在","是","為","及","以","對","從","給","有","會"}
+        wc = Counter()
+        en_re = re.compile(r"[A-Za-z][A-Za-z0-9\-]{2,}")
+        zh_re = re.compile(r"[一-鿿]{2,4}")
+        for (t,) in titles:
+            if not t:
+                continue
+            for tok in en_re.findall(t):
+                k = tok.lower()
+                if k in stop or len(k) < 3:
+                    continue
+                wc[k] += 1
+            for tok in zh_re.findall(t):
+                if tok in stop:
+                    continue
+                wc[tok] += 1
+
+        wordcloud = [{"name": k, "value": v} for k, v in wc.most_common(80)]
+        return {"topics": topics, "wordcloud": wordcloud, "window": window}
+
+    return jsonify(_cached(f"ai:trending:{window}", _produce))
+
+
+@app.route("/api/ai/model-timeline")
+def api_ai_model_timeline():
+    """模型發布時間軸 + benchmark 排行。"""
+    from datetime import datetime, timedelta, timezone
+    from modules.database.models import NewsItem, SessionLocal
+
+    try:
+        days = max(7, min(365, int(request.args.get("days", 180))))
+    except ValueError:
+        days = 180
+
+    def _produce():
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        with SessionLocal() as s:
+            rows = (
+                s.query(NewsItem)
+                .filter(NewsItem.is_ai == 1, NewsItem.model_release == 1,
+                        (NewsItem.published_at >= cutoff) | (NewsItem.fetched_at >= cutoff))
+                .order_by(NewsItem.published_at.desc().nullslast())
+                .limit(200)
+                .all()
+            )
+            releases = [{
+                "date": (r.published_at or r.fetched_at or "")[:10],
+                "company": r.ai_company,
+                "title": r.title,
+                "url": r.url,
+                "source": r.source_name,
+            } for r in rows]
+
+        # Benchmarks 從 YAML 讀（若不存在給空）
+        benchmarks: list[dict] = []
+        try:
+            import yaml
+            bp = PROJECT_ROOT / "config" / "ai_benchmarks.yaml"
+            if bp.exists():
+                with open(bp, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+                benchmarks = data.get("benchmarks") or []
+        except Exception:
+            benchmarks = []
+
+        return {"releases": releases, "benchmarks": benchmarks, "days": days}
+
+    return jsonify(_cached(f"ai:models:{days}", _produce))
+
+
+@app.route("/api/ai/used-set")
+def api_ai_used_set():
+    """某 entity_type 下的已用 id set + used_in_slug map。"""
+    entity_type = (request.args.get("type") or "news").strip()
+    if entity_type not in ("news", "topic"):
+        return jsonify({"error": "invalid type"}), 400
+
+    def _produce():
+        from modules.ai_war_room.used_marks import get_used_set, get_used_slug_map
+        return {
+            "ids": sorted(get_used_set(entity_type)),
+            "slug_map": get_used_slug_map(entity_type),
+        }
+    return jsonify(_cached(f"ai:used:{entity_type}", _produce))
+
+
+@app.route("/api/ai/mark-used", methods=["POST"])
+@login_required
+def api_ai_mark_used():
+    from modules.ai_war_room.used_marks import mark_news_used, mark_topic_used
+    data = request.get_json(silent=True) or {}
+    entity_type = (data.get("entity_type") or "").strip()
+    entity_id = str(data.get("entity_id") or "").strip()
+    used_in_slug = (data.get("used_in_slug") or "").strip()
+    if entity_type not in ("news", "topic") or not entity_id:
+        return jsonify({"error": "invalid payload"}), 400
+    mid = mark_news_used(entity_id, used_in_slug) if entity_type == "news" else mark_topic_used(entity_id, used_in_slug)
+    # 清相關 cache
+    _heat_api_cache.pop(f"ai:used:{entity_type}", None)
+    return jsonify({"id": mid, "ok": True})
+
+
+@app.route("/api/ai/mark-used/<int:mark_id>", methods=["DELETE"])
+@login_required
+def api_ai_unmark(mark_id: int):
+    from modules.ai_war_room.used_marks import unmark
+    ok = unmark(mark_id)
+    _heat_api_cache.pop("ai:used:news", None)
+    _heat_api_cache.pop("ai:used:topic", None)
+    return jsonify({"ok": bool(ok)})
 
 
 # 模組載入時自動啟動（讓 gunicorn / flask / 直接跑 都能觸發）

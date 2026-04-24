@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 戰情室 — AI 頻道</title>
+<link rel="stylesheet" href="/static/css/app.css">
+<link rel="stylesheet" href="/static/css/ai_war_room.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+<style>
+  body { background: #0b1220; color: #e5eaf0; margin: 0; font-family: -apple-system, "Segoe UI", sans-serif; }
+  .awr-public-nav { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
+  .awr-public-nav .brand { font-weight: 700; font-size: 16px; }
+  .awr-public-nav a { color: #4ea1ff; text-decoration: none; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="awr-public-nav">
+  <div class="brand">🎬 AI 頻道 · 戰情室</div>
+  <a href="/episodes">影片集數 →</a>
+</div>
+
+<div class="awr awr-public" data-mode="public">
+  <div class="awr-header">
+    <div>
+      <h1 class="awr-title"><span class="emoji">🤖</span>AI 新聞戰情室</h1>
+      <div class="awr-sub">掌握 OpenAI / Anthropic / Google / NVIDIA 等 AI 巨頭動態</div>
+    </div>
+    <div class="awr-controls">
+      <button class="awr-btn awr-window active" data-window="24h">24h</button>
+      <button class="awr-btn awr-window" data-window="7d">7d</button>
+    </div>
+  </div>
+
+  <div class="awr-grid">
+    <section class="awr-panel" id="panel-news">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">📰 即時新聞流</h2>
+        <div class="awr-tabs" id="awr-news-tabs">
+          <button class="awr-tab active" data-feed="all">全部</button>
+          <button class="awr-tab" data-feed="product">Product</button>
+          <button class="awr-tab" data-feed="funding">Funding</button>
+          <button class="awr-tab" data-feed="partnership">Partnership</button>
+          <button class="awr-tab" data-feed="research">Research</button>
+          <button class="awr-tab" data-feed="policy">Policy</button>
+        </div>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+
+    <section class="awr-panel" id="panel-trending">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">🔥 熱度榜 + 話題雲</h2>
+        <span class="awr-panel-meta" data-role="window">24h</span>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+
+    <section class="awr-panel full" id="panel-companies">
+      <div class="awr-panel-head"><h2 class="awr-panel-title">🏢 巨頭動態牆</h2></div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+
+    <section class="awr-panel full" id="panel-models">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">📈 模型發布時間軸 + 評測排行</h2>
+        <span class="awr-panel-meta">近 180 天</span>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+  </div>
+
+  <div class="awr-public-footer">
+    由 AI 頻道自動整理｜資料來源：OpenAI / Anthropic / Google DeepMind / Meta / xAI / NVIDIA / arXiv / HuggingFace 等
+    · <a href="/episodes">逛逛我們的影片</a>
+  </div>
+</div>
+
+<script>window.__AWR_MODE__ = 'public';</script>
+<script src="/static/js/ai_war_room.js"></script>
+<script src="/static/js/ai_panel_news.js"></script>
+<script src="/static/js/ai_panel_companies.js"></script>
+<script src="/static/js/ai_panel_trending.js"></script>
+<script src="/static/js/ai_panel_models.js"></script>
+<script>AiWarRoom.init();</script>
+</body>
+</html>

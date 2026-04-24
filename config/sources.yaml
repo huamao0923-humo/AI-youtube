@@ -200,11 +200,55 @@ community_research:
     priority: 7
     scrape_method: "rss"
 
+  - name: "ArXiv CS.CL"
+    rss: "https://arxiv.org/rss/cs.CL"
+    priority: 7
+    scrape_method: "rss"
+
+  - name: "ArXiv CS.LG"
+    rss: "https://arxiv.org/rss/cs.LG"
+    priority: 7
+    scrape_method: "rss"
+
   - name: "Papers With Code Latest"
     url: "https://paperswithcode.com/latest"
     rss: null
     priority: 7
     scrape_method: "scrape"
+
+  - name: "HuggingFace Papers"
+    url: "https://huggingface.co/papers"
+    rss: null
+    priority: 7
+    scrape_method: "scrape"
+
+  - name: "LMSYS / LMArena Blog"
+    rss: "https://lmsys.org/blog/index.xml"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "NVIDIA Developer GenAI Blog"
+    rss: "https://developer.nvidia.com/blog/category/generative-ai/feed/"
+    priority: 8
+    scrape_method: "rss"
+
+  - name: "Oracle AI Blog"
+    rss: "https://blogs.oracle.com/ai-and-datascience/rss"
+    priority: 6
+    scrape_method: "rss"
+
+  - name: "Inflection AI"
+    url: "https://inflection.ai/news"
+    rss: null
+    priority: 6
+    scrape_method: "scrape"
+
+  - name: "GitHub Trending (AI)"
+    url: "https://github.com/trending?since=daily&spoken_language_code=en"
+    rss: null
+    priority: 6
+    scrape_method: "scrape"
+    filter_keywords: ["ai", "llm", "model", "transformer", "diffusion", "agent", "rag"]
 
 # ============================================================
 # AI 商業應用專業媒體

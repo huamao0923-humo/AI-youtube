@@ -50,6 +50,10 @@ out.txt
 # 日誌
 logs/*
 !logs/.gitkeep
+data/logs/
+
+# Claude Code 本地設定
+.claude/
 
 # 聲音樣本（個人隱私）
 voice_samples/raw/*

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}AI 戰情室{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/ai_war_room.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="awr" data-mode="admin">
+  <div class="awr-header">
+    <div>
+      <h1 class="awr-title"><span class="emoji">🤖</span>AI 新聞戰情室</h1>
+      <div class="awr-sub">美系前沿實驗室 · 雲端 / 晶片巨頭 · 研究社群</div>
+    </div>
+    <div class="awr-controls">
+      <button class="awr-btn awr-window active" data-window="24h">24h</button>
+      <button class="awr-btn awr-window" data-window="7d">7d</button>
+      <label class="awr-btn" style="display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="awr-hide-used" checked> 隱藏已用
+      </label>
+      <button class="awr-btn" id="awr-refresh" title="立即重新整理">🔄</button>
+    </div>
+  </div>
+
+  <div class="awr-grid">
+    <!-- 即時新聞流 -->
+    <section class="awr-panel" id="panel-news">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">📰 即時新聞流</h2>
+        <div class="awr-tabs" id="awr-news-tabs">
+          <button class="awr-tab active" data-feed="all">全部</button>
+          <button class="awr-tab" data-feed="product">Product</button>
+          <button class="awr-tab" data-feed="funding">Funding</button>
+          <button class="awr-tab" data-feed="partnership">Partnership</button>
+          <button class="awr-tab" data-feed="research">Research</button>
+          <button class="awr-tab" data-feed="policy">Policy</button>
+        </div>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+
+    <!-- 熱度榜 + 話題雲 -->
+    <section class="awr-panel" id="panel-trending">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">🔥 熱度榜 + 話題雲</h2>
+        <span class="awr-panel-meta" data-role="window">24h</span>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+
+    <!-- 巨頭動態牆 -->
+    <section class="awr-panel full" id="panel-companies">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">🏢 巨頭動態牆</h2>
+        <span class="awr-panel-meta">點擊卡片查看最新動作</span>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+
+    <!-- 模型發布時間軸 + 評測排行 -->
+    <section class="awr-panel full" id="panel-models">
+      <div class="awr-panel-head">
+        <h2 class="awr-panel-title">📈 模型發布時間軸 + 評測排行</h2>
+        <span class="awr-panel-meta">近 180 天</span>
+      </div>
+      <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.__AWR_MODE__ = 'admin';</script>
+<script src="/static/js/ai_war_room.js"></script>
+<script src="/static/js/ai_panel_news.js"></script>
+<script src="/static/js/ai_panel_companies.js"></script>
+<script src="/static/js/ai_panel_trending.js"></script>
+<script src="/static/js/ai_panel_models.js"></script>
+<script>AiWarRoom.init();</script>
+{% endblock %}

@@ -20,10 +20,23 @@ from datetime import datetime, timezone
 
 from loguru import logger
 
+from pathlib import Path
+
+from modules.ai_war_room.filter import is_ai_related, load_ai_source_whitelist
 from modules.common.logging_setup import setup_logger
 from modules.common.news_classifier import classify_slug
 from modules.common.region_detector import detect_region
 from modules.database.models import NewsItem, SessionLocal
+
+_SOURCES_YAML = Path(__file__).resolve().parents[2] / "config" / "sources.yaml"
+_AI_SOURCE_WHITELIST: set[str] | None = None
+
+
+def _get_ai_whitelist() -> set[str]:
+    global _AI_SOURCE_WHITELIST
+    if _AI_SOURCE_WHITELIST is None:
+        _AI_SOURCE_WHITELIST = load_ai_source_whitelist(str(_SOURCES_YAML))
+    return _AI_SOURCE_WHITELIST
 
 setup_logger()
 
@@ -57,6 +70,7 @@ def classify_and_persist(news_ids: list[int] | None = None,
             rows = q.filter(NewsItem.id > last_id).limit(batch_size).all()
             if not rows:
                 break
+            ai_whitelist = _get_ai_whitelist()
             for row in rows:
                 item = {
                     "title": row.title,
@@ -68,6 +82,10 @@ def classify_and_persist(news_ids: list[int] | None = None,
                 }
                 row.category = classify_slug(item)
                 row.region = detect_region(item)
+                # AI 戰情室 filter（讀最新 category 再判斷，才吃得到 ai_model / semiconductor）
+                item["category"] = row.category
+                is_ai, _matched = is_ai_related(item, ai_whitelist)
+                row.is_ai = is_ai
                 row.classified_at = now
                 processed += 1
             last_id = rows[-1].id
