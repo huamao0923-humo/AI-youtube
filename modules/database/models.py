@@ -202,6 +202,9 @@ class Topic(Base):
     heat_index      = Column(Float, default=0, index=True)
     heat_prev       = Column(Float, default=0)   # 前一次 refresh 的 heat，用於算漲跌
     heat_updated_at = Column(String(64))
+    # 戰情室卡片用：主題彙總繁中摘要（topic_summarizer 寫入）
+    summary_zh           = Column(Text)
+    summary_generated_at = Column(String(64))
 
 
 class AiUsedMark(Base):
@@ -281,6 +284,8 @@ def _migrate_columns() -> None:
             ("heat_index", "FLOAT"),
             ("heat_prev", "FLOAT"),
             ("heat_updated_at", "VARCHAR(64)"),
+            ("summary_zh", "TEXT"),
+            ("summary_generated_at", "VARCHAR(64)"),
         ],
     }
     from sqlalchemy import text as _sql

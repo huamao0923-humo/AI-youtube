@@ -36,12 +36,65 @@ def step_fetch(dry_run: bool = False) -> dict:
     return asyncio.run(run_all(write_db=not dry_run))
 
 
-def step_score(dry_run: bool = False) -> dict:
-    logger.info("═══ 步驟 2：CoWork 評分 ═══")
-    from modules.filter.export_for_scoring import main as export
+def step_score(dry_run: bool = False, auto: bool = True, max_total: int = 2000) -> dict:
+    """評分待處理新聞。
+
+    auto=True（預設）：直接呼叫 scorer.run() 自動跑 Anthropic API，
+        迴圈直到 backlog 清空或達 max_total。
+        若 ANTHROPIC_API_KEY 缺、或 Anthropic 拋例外 → fallback 到 cowork。
+    auto=False：走舊的 export → 手動評分流程（CoWork 模式）。
+    """
+    logger.info("═══ 步驟 2：評分 ═══")
     if dry_run:
         logger.info("[dry-run] 跳過評分，使用現有候選")
         return {"mode": "dry-run"}
+
+    if auto:
+        try:
+            from modules.filter.scorer import run as scorer_run
+            from modules.database import db_manager as _db
+        except Exception as e:
+            logger.error(f"載入 scorer 失敗：{e}，fallback 到 CoWork 模式")
+            return _step_score_cowork()
+
+        total_scored = total_cand = total_skip = 0
+        rounds = 0
+        # 一個 batch 大概 100 則，不超過 max_total / 100 輪即停
+        max_rounds = max(1, max_total // 100)
+        while rounds < max_rounds:
+            try:
+                stats = scorer_run(limit=100)
+            except Exception as e:
+                logger.error(f"自動評分失敗（round {rounds + 1}）：{e}")
+                if rounds == 0:
+                    logger.warning("第一輪即失敗，fallback 到 CoWork 模式")
+                    return _step_score_cowork()
+                break
+            scored = stats.get("scored", 0)
+            total_scored += scored
+            total_cand += stats.get("candidates", 0)
+            total_skip += stats.get("skipped", 0)
+            rounds += 1
+            if scored == 0:
+                break
+            # 還剩多少
+            try:
+                remaining = len(_db.fetch_news_to_score(limit=1))
+            except Exception:
+                remaining = 0
+            if remaining == 0:
+                break
+
+        logger.info(f"自動評分完成：scored={total_scored} candidates={total_cand} skipped={total_skip} rounds={rounds}")
+        return {"mode": "auto", "scored": total_scored,
+                "candidates": total_cand, "skipped": total_skip, "rounds": rounds}
+
+    return _step_score_cowork()
+
+
+def _step_score_cowork() -> dict:
+    from modules.filter.export_for_scoring import main as export
+    logger.info("CoWork 評分模式")
     export()
     logger.info("請將 data/scoring_queue.json 交給 Claude Code 評分後執行：")
     logger.info("  python -m modules.filter.import_scores")
@@ -151,7 +204,10 @@ def main() -> None:
     ap.add_argument("--compose", action="store_true")
     ap.add_argument("--upload", action="store_true")
     ap.add_argument("--all", action="store_true")
+    ap.add_argument("--cowork", action="store_true",
+                    help="評分改走 CoWork 手動模式（預設為自動）")
     args = ap.parse_args()
+    auto_score = not args.cowork
 
     init_db()
     start = datetime.now()
@@ -159,14 +215,14 @@ def main() -> None:
     if args.dry_run or args.all:
         logger.info("🔁 每日流水線開始")
         step_fetch(dry_run=args.dry_run)
-        step_score(dry_run=args.dry_run)
+        step_score(dry_run=args.dry_run, auto=auto_score)
         step_brief()
-        logger.info("✅ dry-run 完成，等待人工選題後繼續")
+        logger.info("✅ 評分 + Brief 完成，等待人工選題後繼續")
 
     if args.fetch:
         step_fetch()
     if args.score:
-        step_score()
+        step_score(auto=auto_score)
     if args.brief:
         step_brief()
     if args.tts:

@@ -21,11 +21,18 @@ setup_logger()
 
 
 def job_fetch_and_score():
-    """06:00 — 抓取新聞 + 輸出評分佇列。"""
-    logger.info("排程任務：抓取新聞")
+    """06:00 — 抓取新聞 + 自動評分。"""
+    logger.info("排程任務：抓取新聞 + 自動評分")
     from daily_pipeline import step_fetch, step_score
     step_fetch()
-    step_score()
+    step_score(auto=True)
+
+
+def job_rescore_backlog():
+    """06:15 — 補評分 backlog（若 06:00 沒清完）。"""
+    logger.info("排程任務：補評分 backlog")
+    from daily_pipeline import step_score
+    step_score(auto=True)
 
 
 def job_generate_brief():
@@ -33,6 +40,21 @@ def job_generate_brief():
     logger.info("排程任務：生成 Daily Brief")
     from daily_pipeline import step_brief
     step_brief()
+
+
+def job_topic_summary():
+    """06:45 — 翻譯新聞摘要 + 生成主題彙總摘要（戰情室卡片用）。"""
+    logger.info("排程任務：主題彙總摘要")
+    try:
+        from modules.ai_war_room.translator import translate_summaries
+        translate_summaries(limit=300)
+    except Exception as e:
+        logger.warning(f"摘要翻譯失敗：{e}")
+    try:
+        from modules.ai_war_room.topic_summarizer import run as summarize_topics
+        summarize_topics(limit=50)
+    except Exception as e:
+        logger.warning(f"主題彙總失敗：{e}")
 
 
 def job_compose_and_upload():
@@ -91,13 +113,21 @@ def main():
     init_db()
     scheduler = BlockingScheduler(timezone="Asia/Taipei")
 
-    # 每日 06:00 — 抓取新聞
+    # 每日 06:00 — 抓取新聞 + 自動評分
     scheduler.add_job(job_fetch_and_score, CronTrigger(hour=6, minute=0),
-                      id="fetch", name="抓取新聞")
+                      id="fetch", name="抓取新聞 + 自動評分")
+
+    # 每日 06:15 — 補評分 backlog
+    scheduler.add_job(job_rescore_backlog, CronTrigger(hour=6, minute=15),
+                      id="rescore", name="補評分 backlog")
 
     # 每日 06:30 — 生成 Brief
     scheduler.add_job(job_generate_brief, CronTrigger(hour=6, minute=30),
                       id="brief", name="生成 Brief")
+
+    # 每日 06:45 — 主題彙總摘要（戰情室卡片用）
+    scheduler.add_job(job_topic_summary, CronTrigger(hour=6, minute=45),
+                      id="topic_summary", name="主題彙總摘要")
 
     # 每日 14:00 — 合成 + 上傳（若腳本已確認）
     scheduler.add_job(job_compose_and_upload, CronTrigger(hour=14, minute=0),

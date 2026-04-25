@@ -1688,9 +1688,10 @@ def api_ai_trending_topics():
 
     def _produce():
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        fallback = False
 
         with SessionLocal() as s:
-            # Topic 排行：有 news.is_ai=1 的 topic，按命中 AI 新聞數排
+            # Tier 1：window 內有新 AI 新聞的 topic
             topic_rows = (
                 s.query(Topic, func.count(NewsItem.id).label("cnt"))
                 .join(NewsItem, NewsItem.topic_id == Topic.id)
@@ -1701,24 +1702,76 @@ def api_ai_trending_topics():
                 .limit(10)
                 .all()
             )
+            # Tier 2 fallback：window 內無資料時，列出 heat_index 最高的 AI topic
+            if not topic_rows:
+                fallback = True
+                topic_rows = (
+                    s.query(Topic, func.count(NewsItem.id).label("cnt"))
+                    .join(NewsItem, NewsItem.topic_id == Topic.id)
+                    .filter(NewsItem.is_ai == 1)
+                    .group_by(Topic.id)
+                    .order_by(Topic.heat_index.desc().nullslast(),
+                              func.count(NewsItem.id).desc())
+                    .limit(10)
+                    .all()
+                )
             topics = []
             for t, cnt in topic_rows:
                 pct, arrow = _compute_arrow(t.heat_index or 0, t.heat_prev or 0)
+
+                # 取該 Topic 內 ai_score 最高的 5 則新聞（戰情室卡片展開用）
+                top_news_rows = (
+                    s.query(NewsItem)
+                    .filter(NewsItem.topic_id == t.id, NewsItem.is_ai == 1)
+                    .order_by(NewsItem.ai_score.desc().nullslast(),
+                              NewsItem.published_at.desc().nullslast())
+                    .limit(5)
+                    .all()
+                )
+
+                # 主新聞（最高分）的 angle / suggested_title
+                top = top_news_rows[0] if top_news_rows else None
+                top_score = float(top.ai_score) if top and top.ai_score is not None else None
+
+                # 收集相關公司 / model_release flag
+                companies = sorted({n.ai_company for n in top_news_rows if n.ai_company})
+                model_release = any((n.model_release or 0) == 1 for n in top_news_rows)
+
+                news_items = [{
+                    "id": n.id,
+                    "title": n.title_zh or n.title,
+                    "title_en": n.title,
+                    "summary_zh": n.summary_zh,
+                    "source_name": n.source_name,
+                    "url": n.url,
+                    "ai_score": round(float(n.ai_score), 1) if n.ai_score is not None else None,
+                    "published_at": n.published_at,
+                } for n in top_news_rows]
+
                 topics.append({
                     "topic_id": t.id, "slug": t.slug, "title": t.title,
                     "heat": round(t.heat_index or 0, 3),
                     "news_count": int(cnt), "arrow": arrow, "heat_delta_pct": pct,
                     "category": t.category,
+                    "summary_zh": t.summary_zh,
+                    "business_angle": top.business_angle if top else None,
+                    "why_audience_cares": top.why_audience_cares if top else None,
+                    "suggested_title": top.suggested_title if top else None,
+                    "ai_score": top_score,
+                    "companies": companies,
+                    "model_release": bool(model_release),
+                    "first_seen_date": t.first_seen_date,
+                    "last_seen_date": t.last_seen_date,
+                    "news_items": news_items,
                 })
 
-            # WordCloud：從窗口內 AI 新聞 title tokenize
-            titles = (
-                s.query(NewsItem.title)
-                .filter(NewsItem.is_ai == 1,
-                        (NewsItem.published_at >= cutoff) | (NewsItem.fetched_at >= cutoff))
-                .limit(1500)
-                .all()
-            )
+            # WordCloud：從窗口內 AI 新聞 title tokenize；fallback 用全部
+            wc_q = s.query(NewsItem.title).filter(NewsItem.is_ai == 1)
+            if not fallback:
+                wc_q = wc_q.filter(
+                    (NewsItem.published_at >= cutoff) | (NewsItem.fetched_at >= cutoff)
+                )
+            titles = wc_q.order_by(NewsItem.published_at.desc().nullslast()).limit(1500).all()
 
         # 簡易 tokenizer：英文 word ≥ 3 字；中文 2~4 字詞靠既有 keyword yaml 若存在
         stop = {"the","a","an","and","or","of","to","in","for","on","with","at","by","is","are","be",
@@ -1742,7 +1795,7 @@ def api_ai_trending_topics():
                 wc[tok] += 1
 
         wordcloud = [{"name": k, "value": v} for k, v in wc.most_common(80)]
-        return {"topics": topics, "wordcloud": wordcloud, "window": window}
+        return {"topics": topics, "wordcloud": wordcloud, "window": window, "fallback": fallback}
 
     return jsonify(_cached(f"ai:trending:{window}", _produce))
 
@@ -1933,8 +1986,11 @@ _TASK_SPECS: dict[str, dict] = {
     "classify":    {"label": "🏷️ 分類新聞",     "desc": "寫入 category / region / is_ai",  "args": ["-m", "modules.common.news_pipeline"]},
     "backfill":    {"label": "🏢 補公司 / 模型", "desc": "AI 戰情室用 — ai_company / model_release", "args": ["-m", "modules.ai_war_room.backfill"]},
     "translate":   {"label": "🌐 翻譯標題",     "desc": "本地 Claude CLI 翻譯英文標題為繁中", "args": ["-m", "modules.ai_war_room.translator", "--batch", "5"]},
+    "translate_summary": {"label": "🌐 翻譯摘要", "desc": "本地 Claude CLI 翻譯英文摘要為繁中", "args": ["-m", "modules.ai_war_room.translator", "--mode", "summary"]},
+    "topic_summary": {"label": "📝 主題彙總摘要", "desc": "把同主題多則新聞濃縮成一段繁中摘要（戰情室卡片用）", "args": ["-m", "modules.ai_war_room.topic_summarizer", "--limit", "50"]},
     "brief":       {"label": "📋 生成 Brief",   "desc": "Daily Brief + 熱度指數刷新",      "args": ["daily_pipeline.py", "--brief"]},
-    "score":       {"label": "⭐ 匯出評分佇列", "desc": "產生 scoring_queue.json 供 CoWork", "args": ["daily_pipeline.py", "--score"]},
+    "score":       {"label": "⭐ 自動評分",     "desc": "Claude 自動評分待處理新聞（控成本 max 2000）", "args": ["daily_pipeline.py", "--score"]},
+    "score_cowork": {"label": "⭐ 匯出評分佇列(CoWork)", "desc": "產生 scoring_queue.json 供手動評分（備援）", "args": ["daily_pipeline.py", "--score", "--cowork"]},
     "analytics":   {"label": "📊 更新 YouTube 數據", "desc": "刷新已上傳影片的觀看數",    "args": ["-c", "from modules.database.analytics_tracker import update_video_analytics; update_video_analytics()"]},
     "weekly":      {"label": "📰 產生週報",     "desc": "寫入 data/reports/*.md",          "args": ["-c", "from modules.database.analytics_tracker import generate_weekly_report; print(generate_weekly_report())"]},
 }

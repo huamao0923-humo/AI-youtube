@@ -395,17 +395,18 @@
 
 /* ============ Trending bar chart + Wordcloud ============ */
 .awr-trend-list { list-style: none; padding: 0; margin: 0 0 8px; }
+.awr-trend-item { border-bottom: 1px solid var(--awr-border); }
+.awr-trend-item:last-child { border-bottom: none; }
+.awr-trend-item.expanded { background: var(--awr-surface-2); }
 .awr-trend-row {
   display: grid;
-  grid-template-columns: 20px 1fr auto auto;
+  grid-template-columns: 20px 1fr auto auto 18px;
   gap: 6px;
   align-items: center;
   padding: 4px 2px;
   font-size: var(--awr-fs-base);
   cursor: pointer;
-  border-bottom: 1px solid var(--awr-border);
 }
-.awr-trend-row:last-child { border-bottom: none; }
 .awr-trend-row:hover { background: var(--awr-surface-2); }
 .awr-trend-row .rank { color: var(--awr-dim); font-family: var(--awr-font-mono); font-size: var(--awr-fs-small); text-align: right; }
 .awr-trend-row .bar-wrap {
@@ -419,7 +420,90 @@
 .awr-trend-row .title { font-size: var(--awr-fs-small); color: var(--awr-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .awr-trend-row .count { color: var(--awr-muted); font-family: var(--awr-font-mono); font-size: var(--awr-fs-micro); }
 .awr-trend-row .delta { font-family: var(--awr-font-mono); font-size: var(--awr-fs-small); min-width: 56px; text-align: right; }
+.awr-trend-toggle { color: var(--awr-dim); font-size: var(--awr-fs-micro); text-align: center; user-select: none; }
 .awr-trend-wc { height: 120px; border-top: 1px dashed var(--awr-border); margin-top: 6px; padding-top: 4px; }
+
+/* === Trending row inline detail === */
+.awr-trend-detail-wrap { padding: 0; }
+.awr-trend-detail {
+  padding: 10px 12px 12px;
+  border-top: 1px dashed var(--awr-border);
+  font-size: var(--awr-fs-small);
+  line-height: 1.55;
+  color: var(--awr-text);
+  background: var(--awr-surface);
+}
+.awr-detail-summary {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: var(--awr-surface-2);
+  border-left: 3px solid var(--awr-accent, #4ea1ff);
+  border-radius: 3px;
+}
+.awr-detail-summary.awr-empty { border-left-color: var(--awr-border); color: var(--awr-dim); }
+.awr-detail-angles { margin-bottom: 8px; }
+.awr-angle-row {
+  display: grid; grid-template-columns: 64px 1fr; gap: 8px;
+  padding: 3px 0; font-size: var(--awr-fs-small);
+}
+.awr-angle-row .lbl {
+  color: var(--awr-dim); font-family: var(--awr-font-mono); font-size: var(--awr-fs-micro);
+  white-space: nowrap;
+}
+.awr-detail-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.awr-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: var(--awr-fs-micro);
+  font-family: var(--awr-font-mono);
+  background: var(--awr-surface-2);
+  border: 1px solid var(--awr-border);
+  color: var(--awr-muted);
+}
+.awr-chip-score { background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+.awr-chip-model { background: rgba(34, 197, 94, 0.12); color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
+.awr-chip-co    { background: rgba(78, 161, 255, 0.12); color: #4ea1ff; border-color: rgba(78, 161, 255, 0.3); }
+.awr-chip-date  { color: var(--awr-dim); }
+
+.awr-detail-section-title {
+  margin: 6px 0 4px;
+  font-size: var(--awr-fs-micro);
+  color: var(--awr-dim);
+  font-family: var(--awr-font-mono);
+}
+.awr-news-list { list-style: none; padding: 0; margin: 0 0 8px; }
+.awr-news-row {
+  padding: 6px 0; border-bottom: 1px dotted var(--awr-border);
+}
+.awr-news-row:last-child { border-bottom: none; }
+.awr-news-link {
+  color: var(--awr-text); text-decoration: none; font-weight: 500;
+}
+.awr-news-link:hover { color: var(--awr-accent, #4ea1ff); text-decoration: underline; }
+.awr-news-meta {
+  display: inline-flex; gap: 8px; margin-left: 8px;
+  font-family: var(--awr-font-mono); font-size: var(--awr-fs-micro);
+  color: var(--awr-dim);
+}
+.awr-news-score { color: #f59e0b; }
+.awr-news-source {}
+.awr-news-summary {
+  margin-top: 3px;
+  color: var(--awr-muted);
+  font-size: var(--awr-fs-micro);
+  line-height: 1.5;
+}
+
+.awr-detail-actions { display: flex; gap: 6px; margin-top: 4px; }
+.awr-btn {
+  padding: 4px 10px; border-radius: 4px; font-size: var(--awr-fs-micro);
+  font-family: var(--awr-font-mono); text-decoration: none;
+  border: 1px solid var(--awr-border); cursor: pointer;
+  background: var(--awr-surface-2); color: var(--awr-text);
+}
+.awr-btn:hover { background: var(--awr-surface-3, var(--awr-surface-2)); }
+.awr-btn-secondary { color: var(--awr-muted); }
 
 /* ============ Models rail + Benchmarks ============ */
 .awr-model-rails { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
