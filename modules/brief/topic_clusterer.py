@@ -62,25 +62,39 @@ def _aggregate_score(members: list[dict]) -> float:
 
 def cluster_and_persist(date: str | None = None,
                          min_score: float | None = None,
-                         limit: int = 100) -> dict[str, int]:
+                         limit: int = 100,
+                         no_candidate: bool = False) -> dict[str, int]:
     """對指定日期（或今日）的候選新聞做聚類並寫入 Topic 表。
 
     - 若成員已有 topic_id → 優先加入該 Topic（群內新聞合併）
     - 否則建立新 Topic
     - 更新 NewsItem.topic_id 與 Topic 統計
+
+    Args:
+      no_candidate: True 時繞過 status='candidate' 與當日 fetched_date 過濾，
+                    撈全期所有 ai_score >= min_score 的新聞做補做聚類。
     """
     target_date = date or tw_today()
     if min_score is None:
-        min_score = float(settings().get("filter", {}).get("ai_score_min", 6))
+        min_score = 3.0 if no_candidate else float(settings().get("filter", {}).get("ai_score_min", 6))
 
-    items = db_manager.fetch_candidates(
-        min_score=min_score, limit=limit, fetched_date=target_date,
-    )
+    if no_candidate:
+        items = db_manager.fetch_candidates(
+            min_score=min_score, limit=limit,
+            fetched_date=None, status_filter=None,
+        )
+        scope_label = f"[no-candidate / score>={min_score}]"
+    else:
+        items = db_manager.fetch_candidates(
+            min_score=min_score, limit=limit, fetched_date=target_date,
+        )
+        scope_label = f"[{target_date}]"
+
     if not items:
-        logger.info(f"[{target_date}] 無候選新聞，跳過聚類")
+        logger.info(f"{scope_label} 無候選新聞，跳過聚類")
         return {"topics_created": 0, "topics_updated": 0, "news_attached": 0}
 
-    logger.info(f"[{target_date}] 候選 {len(items)} 則，開始聚類…")
+    logger.info(f"{scope_label} 候選 {len(items)} 則，開始聚類…")
     components = build_entity_components(items)
     logger.info(f"分群結果：{len(components)} 個群組")
 
@@ -172,11 +186,18 @@ def cluster_and_persist(date: str | None = None,
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", type=str, default=None, help="YYYY-MM-DD，預設今日")
-    ap.add_argument("--min-score", type=float, default=None, help="候選門檻")
+    ap.add_argument("--min-score", type=float, default=None, help="候選門檻；--no-candidate 預設 3.0，否則用 settings 的 ai_score_min")
     ap.add_argument("--limit", type=int, default=100)
+    ap.add_argument("--no-candidate", action="store_true",
+                    help="繞過 status='candidate' 與當日日期過濾，全期補做聚類")
     args = ap.parse_args()
 
-    r = cluster_and_persist(date=args.date, min_score=args.min_score, limit=args.limit)
+    if args.no_candidate and args.limit == 100:
+        # 補做模式預設 limit 拉高（1300+ 筆要一次跑完）
+        args.limit = 2000
+
+    r = cluster_and_persist(date=args.date, min_score=args.min_score,
+                             limit=args.limit, no_candidate=args.no_candidate)
     print(f"[OK] 新主題 {r['topics_created']}，更新 {r['topics_updated']}，綁定 {r['news_attached']} 則新聞")
 
 

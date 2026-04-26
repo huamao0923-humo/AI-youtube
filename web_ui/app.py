@@ -1961,10 +1961,12 @@ def _run_refresh_chain() -> None:
         _task_states["refresh_all"] = {"status": "running", "started_at": started,
                                         "finished_at": None, "error": None, "tail": ""}
     sub_specs = [
-        ("fetch",     [sys.executable, "daily_pipeline.py", "--fetch"]),
-        ("classify",  [sys.executable, "-m", "modules.common.news_pipeline"]),
-        ("backfill",  [sys.executable, "-m", "modules.ai_war_room.backfill"]),
-        ("translate", [sys.executable, "-m", "modules.ai_war_room.translator", "--batch", "5"]),
+        ("fetch",            [sys.executable, "daily_pipeline.py", "--fetch"]),
+        ("classify",         [sys.executable, "-m", "modules.common.news_pipeline"]),
+        ("backfill",         [sys.executable, "-m", "modules.ai_war_room.backfill"]),
+        ("translate",        [sys.executable, "-m", "modules.ai_war_room.translator", "--batch", "5"]),
+        ("auto_score",       [sys.executable, "-m", "modules.ai_war_room.auto_scorer", "--batch", "5", "--limit", "300"]),
+        ("cluster_recover",  [sys.executable, "-m", "modules.brief.topic_clusterer", "--no-candidate", "--min-score", "3"]),
     ]
     failed: list[str] = []
     for sub_name, cmd in sub_specs:
@@ -1988,8 +1990,9 @@ _TASK_SPECS: dict[str, dict] = {
     "translate":   {"label": "🌐 翻譯標題",     "desc": "本地 Claude CLI 翻譯英文標題為繁中", "args": ["-m", "modules.ai_war_room.translator", "--batch", "5"]},
     "translate_summary": {"label": "🌐 翻譯摘要", "desc": "本地 Claude CLI 翻譯英文摘要為繁中", "args": ["-m", "modules.ai_war_room.translator", "--mode", "summary"]},
     "topic_summary": {"label": "📝 主題彙總摘要", "desc": "把同主題多則新聞濃縮成一段繁中摘要（戰情室卡片用）", "args": ["-m", "modules.ai_war_room.topic_summarizer", "--limit", "50"]},
+    "auto_score":  {"label": "⭐ AI 自動評分",  "desc": "本地 Claude CLI 為未評分 AI 新聞打分 + 升候選（batch=5 預設 limit=300）", "args": ["-m", "modules.ai_war_room.auto_scorer", "--batch", "5", "--limit", "300"]},
+    "cluster_recover": {"label": "🧩 補做主題聚類", "desc": "繞過 candidate 條件，將全期已評分 AI 新聞補進 Topic（min_score=3）", "args": ["-m", "modules.brief.topic_clusterer", "--no-candidate", "--min-score", "3"]},
     "brief":       {"label": "📋 生成 Brief",   "desc": "Daily Brief + 熱度指數刷新",      "args": ["daily_pipeline.py", "--brief"]},
-    "score":       {"label": "⭐ 自動評分",     "desc": "Claude 自動評分待處理新聞（控成本 max 2000）", "args": ["daily_pipeline.py", "--score"]},
     "score_cowork": {"label": "⭐ 匯出評分佇列(CoWork)", "desc": "產生 scoring_queue.json 供手動評分（備援）", "args": ["daily_pipeline.py", "--score", "--cowork"]},
     "analytics":   {"label": "📊 更新 YouTube 數據", "desc": "刷新已上傳影片的觀看數",    "args": ["-c", "from modules.database.analytics_tracker import update_video_analytics; update_video_analytics()"]},
     "weekly":      {"label": "📰 產生週報",     "desc": "寫入 data/reports/*.md",          "args": ["-c", "from modules.database.analytics_tracker import generate_weekly_report; print(generate_weekly_report())"]},
@@ -2095,9 +2098,33 @@ def start_scheduler_thread() -> None:
     sched.add_job(_job_translate_ai_news, CronTrigger(hour=7, minute=0),
                   id="translate", name="翻譯 AI 新聞標題")
 
+    # AI 戰情室專用：06:15 自動評分新爬的 AI 新聞、06:45 補做主題聚類
+    def _job_auto_score():
+        from loguru import logger
+        try:
+            from modules.ai_war_room.auto_scorer import score
+            r = score(limit=500)
+            logger.info(f"[Scheduler] 自動評分：{r}")
+        except Exception as e:
+            logger.warning(f"[Scheduler] 自動評分失敗：{e}")
+
+    def _job_cluster_recover():
+        from loguru import logger
+        try:
+            from modules.brief.topic_clusterer import cluster_and_persist
+            r = cluster_and_persist(min_score=3.0, limit=2000, no_candidate=True)
+            logger.info(f"[Scheduler] 補做聚類：{r}")
+        except Exception as e:
+            logger.warning(f"[Scheduler] 補做聚類失敗：{e}")
+
+    sched.add_job(_job_auto_score, CronTrigger(hour=6, minute=15),
+                  id="auto_score", name="AI 自動評分")
+    sched.add_job(_job_cluster_recover, CronTrigger(hour=6, minute=45),
+                  id="cluster_recover", name="補做主題聚類")
+
     sched.start()
     _scheduler_started = True
-    print("[Scheduler] 已啟動（台灣時間）：06:00 爬取、06:30 brief、07:00 翻譯、14:00 合成、22:00 數據、週一 09:00 週報")
+    print("[Scheduler] 已啟動（台灣時間）：06:00 爬取、06:15 自動評分、06:30 brief、06:45 補做聚類、07:00 翻譯、14:00 合成、22:00 數據、週一 09:00 週報")
 
 
 # 模組載入時自動啟動（讓 gunicorn / flask / 直接跑 都能觸發）

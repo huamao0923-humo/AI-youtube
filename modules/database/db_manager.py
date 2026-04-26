@@ -89,12 +89,18 @@ def update_ai_scores(updates: list[dict[str, Any]]) -> None:
 
 
 def fetch_candidates(min_score: float = 6.0, limit: int = 5,
-                     fetched_date: str | None = None) -> list[dict[str, Any]]:
+                     fetched_date: str | None = None,
+                     status_filter: str | None = "candidate") -> list[dict[str, Any]]:
+    """撈候選新聞。
+
+    Args:
+      status_filter: 預設 'candidate'（向後相容）；傳 None 可繞過 status 過濾，
+                     供 topic_clusterer --no-candidate 與其他補救流程使用。
+    """
     with get_session() as s:
-        q = (
-            s.query(NewsItem)
-            .filter(NewsItem.status == "candidate", NewsItem.ai_score >= min_score)
-        )
+        q = s.query(NewsItem).filter(NewsItem.ai_score >= min_score)
+        if status_filter:
+            q = q.filter(NewsItem.status == status_filter)
         if fetched_date:
             q = q.filter(NewsItem.fetched_at.like(f"{fetched_date}%"))
         rows = q.order_by(NewsItem.ai_score.desc(), NewsItem.source_priority.desc()).limit(limit).all()
