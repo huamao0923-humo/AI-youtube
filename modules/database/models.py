@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, DateTime, Float, Integer, String, Text, create_engine, event
+    Boolean, Column, DateTime, Float, Integer, String, Text, create_engine, event
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -217,6 +217,36 @@ class AiUsedMark(Base):
     used_in_slug  = Column(String(200))                             # EpisodeStatus.slug 或 'skip_YYYYMMDD'
     marked_at     = Column(String(64), nullable=False)
     marked_by     = Column(String(64))                              # 多使用者預留
+
+
+class DailyCategorySummary(Base):
+    """每日類別總摘要 — 戰情室「焦點新聞」分節下方顯示。
+
+    一天 × 一個 feed 一筆（feed = product / funding / partnership / research / policy / other）。
+    內容是該 feed 當日所有 AI 新聞的 400-600 字繁中總結，由 category_summarizer 寫入。
+    """
+    __tablename__ = "daily_category_summaries"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    date            = Column(String(16), nullable=False, index=True)
+    feed            = Column(String(32), nullable=False, index=True)  # product/funding/...
+    summary_zh      = Column(Text, nullable=False)
+    news_count      = Column(Integer, default=0)
+    top_news_ids    = Column(Text)  # JSON array of news ids that fed into the summary
+    word_count      = Column(Integer, default=0)
+    generated_at    = Column(String(64))
+
+
+class SchedulerRun(Base):
+    """排程任務執行紀錄 — 健康檢查與「上次執行時間」顯示用。"""
+    __tablename__ = "scheduler_runs"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    job_id      = Column(String(50), index=True, nullable=False)
+    last_run    = Column(String(64), index=True, nullable=False)  # ISO8601
+    success     = Column(Boolean, default=True)
+    error_msg   = Column(Text)
+    duration_ms = Column(Integer, default=0)
 
 
 class TopicHeatSnapshot(Base):

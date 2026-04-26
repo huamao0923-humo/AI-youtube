@@ -223,19 +223,32 @@ def clear_date():
     return redirect(url_for("news_dates"))
 
 
+def _is_fetch_request() -> bool:
+    """判斷這次 request 是不是 fetch/AJAX（戰情室選題時不希望 redirect）。"""
+    if request.headers.get("X-Requested-With", "").lower() == "fetch":
+        return True
+    accept = request.headers.get("Accept", "")
+    return "application/json" in accept and "text/html" not in accept
+
+
 @app.route("/select-topic", methods=["POST"])
 @login_required
 def select_topic_from_topic():
     """從 Topic 開集：把整個 topic 下的 news 綁進 EpisodeStatus + Episode。"""
     import json
+    is_fetch = _is_fetch_request()
     topic_id = int(request.form["topic_id"])
     topic = db_manager.get_topic(topic_id)
     if not topic:
+        if is_fetch:
+            return jsonify({"ok": False, "error": "找不到該主題"}), 404
         flash("找不到該主題", "error")
         return redirect(url_for("dashboard"))
 
     news_rows = db_manager.list_news_by_topic(topic_id)
     if not news_rows:
+        if is_fetch:
+            return jsonify({"ok": False, "error": "此主題沒有成員新聞"}), 400
         flash("此主題沒有成員新聞", "error")
         return redirect(url_for("topic_detail", slug=topic["slug"]))
 
@@ -277,6 +290,11 @@ def select_topic_from_topic():
     except Exception:
         pass
 
+    if is_fetch:
+        return jsonify({
+            "ok": True, "slug": slug, "title": topic["title"],
+            "episode_url": url_for("episode_page", slug=slug),
+        })
     flash(f"已開集：{topic['title']}", "success")
     return redirect(url_for("episode_page", slug=slug))
 
@@ -284,6 +302,7 @@ def select_topic_from_topic():
 @app.route("/select", methods=["POST"])
 @login_required
 def select_topic():
+    is_fetch = _is_fetch_request()
     news_id = int(request.form["news_id"])
     angle   = request.form.get("angle", "A")
     note    = request.form.get("custom_note", "")
@@ -319,6 +338,11 @@ def select_topic():
     except Exception:
         pass
 
+    if is_fetch:
+        return jsonify({
+            "ok": True, "slug": slug, "title": title,
+            "episode_url": url_for("episode_page", slug=slug),
+        })
     return redirect(url_for("episode_page", slug=slug))
 
 
@@ -637,7 +661,7 @@ def all_news_page():
 @app.route("/scoring")
 @login_required
 def scoring_page():
-    """顯示待評分新聞，並提供匯入評分結果的介面。"""
+    """顯示自動評分監控狀態（CoWork 手動模式降級為備援摺疊區）。"""
     pending = db_manager.fetch_news_to_score(limit=50)
     return render_template("scoring.html",
                            pending=pending,
@@ -693,6 +717,274 @@ def api_scoring_import():
     db_manager.update_ai_scores(updates)
     candidates = sum(1 for u in updates if u["status"] == "candidate")
     return jsonify({"ok": True, "scored": len(updates), "candidates": candidates})
+
+
+# ─── 評分自動監控 API ─────────────────────────────────────────
+_scoring_thread: threading.Thread | None = None
+
+
+@app.route("/api/scoring/run-now", methods=["POST"])
+@login_required
+def api_scoring_run_now():
+    """立即在背景重跑自動評分（呼叫 modules.filter.scorer.run）。"""
+    global _scoring_thread
+    if _scoring_thread and _scoring_thread.is_alive():
+        return jsonify({"ok": False, "error": "已有評分任務在執行中"}), 409
+
+    try:
+        limit = int(request.json.get("limit", 200)) if request.is_json else 200
+    except Exception:
+        limit = 200
+
+    def _run():
+        import time as _t
+        t0 = _t.time()
+        success = True
+        err = None
+        try:
+            from modules.filter.scorer import run as scorer_run
+            scorer_run(limit=limit)
+        except Exception as e:
+            success = False
+            err = str(e)[:300]
+        finally:
+            try:
+                db_manager.record_scheduler_run(
+                    job_id="manual_score", success=success,
+                    error_msg=err, duration_ms=int((_t.time() - t0) * 1000),
+                )
+            except Exception:
+                pass
+
+    _scoring_thread = threading.Thread(target=_run, daemon=True, name="manual-scoring")
+    _scoring_thread.start()
+    return jsonify({"ok": True, "message": "已在背景啟動，預計數十秒內完成"})
+
+
+@app.route("/api/scoring/status")
+@login_required
+def api_scoring_status():
+    """評分頁面用：上次跑的時間、待評分數、模型、下次排程。"""
+    from modules.common.config import settings as _settings
+    pending = db_manager.fetch_news_to_score(limit=1000)
+    pending_count = len(pending)
+
+    # 今日已評分統計
+    from modules.common.utils import tw_today
+    from modules.database.models import SessionLocal as _SL, NewsItem as _NI
+    today = tw_today()
+    with _SL() as s:
+        scored_today = s.query(_NI).filter(
+            _NI.fetched_at.like(f"{today}%"),
+            _NI.ai_score.isnot(None),
+        ).count()
+        candidates_today = s.query(_NI).filter(
+            _NI.fetched_at.like(f"{today}%"),
+            _NI.status == "candidate",
+        ).count()
+        skipped_today = s.query(_NI).filter(
+            _NI.fetched_at.like(f"{today}%"),
+            _NI.status == "skipped",
+        ).count()
+
+    # 取 fetch / rescore / manual_score 三者最近一次成功的紀錄
+    runs = db_manager.get_scheduler_runs() or {}
+    relevant = []
+    for jid in ("fetch", "rescore", "auto_score", "manual_score"):
+        if jid in runs:
+            relevant.append((jid, runs[jid]))
+    last_auto = max(relevant, key=lambda kv: kv[1]["last_run"]) if relevant else (None, {})
+    last_run_info = last_auto[1] if last_auto[0] else {}
+
+    try:
+        model = _settings()["claude"].get("model", "claude-haiku-4-5-20251001")
+    except Exception:
+        model = "unknown"
+
+    next_run_at = None
+    try:
+        next_run_at = _next_scheduler_run(["fetch", "auto_score", "rescore"])
+    except Exception:
+        pass
+
+    return jsonify({
+        "pending": pending_count,
+        "scored_today": scored_today,
+        "candidates_today": candidates_today,
+        "skipped_today": skipped_today,
+        "last_auto_run": last_run_info.get("last_run"),
+        "last_auto_success": last_run_info.get("success"),
+        "last_auto_job": last_auto[0],
+        "last_error": last_run_info.get("error_msg"),
+        "model": model,
+        "next_run_at": next_run_at,
+        "running": bool(_scoring_thread and _scoring_thread.is_alive()),
+    })
+
+
+def _next_scheduler_run(job_ids: list[str]) -> str | None:
+    """從內嵌 BackgroundScheduler 取下一次執行時間（取所有 job 中最近的）。"""
+    try:
+        sched = globals().get("_bg_scheduler")
+        if not sched:
+            return None
+        nexts = []
+        for j in sched.get_jobs():
+            if j.id in job_ids and j.next_run_time:
+                nexts.append(j.next_run_time)
+        if not nexts:
+            return None
+        return min(nexts).isoformat()
+    except Exception:
+        return None
+
+
+@app.route("/api/system/scheduler-status")
+@login_required
+def api_scheduler_status():
+    """排程器健康檢查 — 戰情室、儀表板、設定頁的警示 banner 用。"""
+    from datetime import datetime as _dt, timezone as _tz
+    runs = db_manager.get_scheduler_runs() or {}
+
+    # 內嵌 BackgroundScheduler 的下一次執行表
+    next_jobs = []
+    try:
+        sched = globals().get("_bg_scheduler")
+        if sched:
+            for j in sched.get_jobs():
+                next_jobs.append({
+                    "id": j.id,
+                    "name": j.name,
+                    "next_run_at": j.next_run_time.isoformat() if j.next_run_time else None,
+                })
+    except Exception:
+        pass
+
+    # 警示判斷：fetch / auto_score 兩者其一在 30 小時內無成功紀錄
+    warning = None
+    critical = ["fetch", "auto_score"]
+    now_utc = _dt.now(_tz.utc)
+    for jid in critical:
+        info = runs.get(jid)
+        if not info or not info.get("success"):
+            warning = f"關鍵任務 {jid} 未成功執行（或從未執行）"
+            break
+        try:
+            last = _dt.fromisoformat(info["last_run"].replace("Z", "+00:00"))
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=_tz.utc)
+            if (now_utc - last).total_seconds() > 30 * 3600:
+                warning = f"關鍵任務 {jid} 已超過 30 小時未執行"
+                break
+        except Exception:
+            continue
+
+    cloud_enabled = os.getenv("SCHEDULER_ENABLED", "1") != "0"
+    return jsonify({
+        "cloud_enabled": cloud_enabled,
+        "scheduler_mode": os.getenv("SCHEDULER_MODE", "all"),
+        "next_jobs": next_jobs,
+        "last_runs": runs,
+        "warning": warning,
+        "now": now_utc.isoformat(),
+    })
+
+
+# ─── 類別摘要 API（Phase B 新增） ─────────────────────────
+_category_summary_thread: threading.Thread | None = None
+
+
+@app.route("/api/ai/category-summaries")
+@login_required
+def api_ai_category_summaries():
+    """戰情室「焦點新聞」每個分節用：取指定日期的全部類別摘要。"""
+    from modules.common.utils import tw_today
+    date = request.args.get("date") or tw_today()
+    summaries = db_manager.load_category_summaries(date) or {}
+    return jsonify({
+        "date": date,
+        "count": len(summaries),
+        "summaries": summaries,
+    })
+
+
+@app.route("/api/ai/category-summaries/run-now", methods=["POST"])
+@login_required
+def api_ai_category_summaries_run_now():
+    """立即在背景重跑類別總摘要。"""
+    global _category_summary_thread
+    if _category_summary_thread and _category_summary_thread.is_alive():
+        return jsonify({"ok": False, "error": "已有摘要任務在執行中"}), 409
+
+    body = request.get_json(silent=True) or {}
+    feed = body.get("feed")
+    force = bool(body.get("force", True))
+
+    def _run():
+        import time as _t
+        t0 = _t.time()
+        success = True
+        err = None
+        try:
+            from modules.ai_war_room.category_summarizer import run as cat_run
+            cat_run(feed=feed, force=force)
+        except Exception as e:
+            success = False
+            err = str(e)[:300]
+        finally:
+            try:
+                db_manager.record_scheduler_run(
+                    job_id="manual_category_summary", success=success,
+                    error_msg=err, duration_ms=int((_t.time() - t0) * 1000),
+                )
+            except Exception:
+                pass
+
+    _category_summary_thread = threading.Thread(
+        target=_run, daemon=True, name="category-summary",
+    )
+    _category_summary_thread.start()
+    return jsonify({"ok": True, "message": "已在背景啟動，預計 30~120 秒完成"})
+
+
+@app.route("/api/episodes/today")
+@login_required
+def api_episodes_today():
+    """戰情室右側 sidepanel 用：今日已選 episodes 與其 stage 進度。"""
+    from modules.common.utils import tw_today
+    today = tw_today()
+    statuses = db_manager.list_episode_statuses(date=today) or []
+
+    # stage 對應進度條百分比
+    stage_pct = {
+        "selected": 10, "researching": 25, "scripting": 40,
+        "tts": 55, "prefetch": 65, "images": 70,
+        "compositing": 80, "upload_ready": 90,
+        "uploading": 95, "done": 100,
+        "idle": 5, "cancelled": 0,
+    }
+
+    rows = []
+    for st in statuses:
+        slug = st.get("slug")
+        ep = db_manager.get_episode_by_slug(slug) or {}
+        stage = st.get("stage") or "idle"
+        rows.append({
+            "slug": slug,
+            "title": ep.get("title") or slug,
+            "stage": stage,
+            "stage_pct": stage_pct.get(stage, 5),
+            "error_msg": st.get("error_msg"),
+            "created_at": st.get("created_at"),
+            "updated_at": st.get("updated_at"),
+            "youtube_id": ep.get("youtube_id"),
+        })
+
+    return jsonify({
+        "date": today,
+        "count": len(rows),
+        "episodes": rows,
+    })
 
 
 @app.route("/api/recommend-brief", methods=["POST"])
@@ -1399,42 +1691,7 @@ def _ai_parse_published(dt_str: str | None):
     return None
 
 
-def _ai_feed_tag(row) -> str:
-    """把 NewsItem 分到 product / funding / partnership / research / policy / other。"""
-    title = (row.title or "").lower()
-    title_zh = row.title_zh or ""
-    text = title + " " + title_zh
-    cat = (row.category or "").lower()
-    src = (row.source_name or "").lower()
-
-    # research：arXiv / PWC / HF Papers / GitHub Trending / Reddit r/ML
-    if any(k in src for k in ("arxiv", "papers", "huggingface", "github trending", "r/machinelearning", "r/locallm", "r/localllama")):
-        return "research"
-    if cat == "policy" or any(k in text for k in (
-        "regulat", "lawmaker", "senate", "congress", "fcc", "ftc", "eu ai act",
-        "監管", "法案", "法規", "立法", "政策", "禁令", "制裁",
-    )):
-        return "policy"
-    if cat == "product" or any(k in text for k in (
-        "launch", "release", "announce", "unveil", "introduc", "debut",
-        "ship", "roll out", "rolling out", "now available", "now live",
-        "goes live", "open beta", "open-source", "open source",
-        "發布", "推出", "上線", "上架", "開放", "開源", "公布", "正式", "亮相",
-    )):
-        return "product"
-    if any(k in text for k in (
-        "raise", "funding", "series ", "valuation", "valued at", "ipo",
-        "acquire", "acquisition", "buyout", "invest", "round",
-        "融資", "併購", "收購", "估值", "投資", "入股",
-    )):
-        return "funding"
-    if any(k in text for k in (
-        "partner", "partnership", "teams up", "team up", "joint ", "joins forces",
-        "sign", "deal with", "collaborat", "alliance",
-        "合作", "聯手", "攜手", "結盟", "簽約", "共同",
-    )):
-        return "partnership"
-    return "other"
+from modules.ai_war_room.feed_tag import ai_feed_tag as _ai_feed_tag  # 共用分類器
 
 
 _SUMMARY_NOISE = __import__("re").compile(
@@ -2046,6 +2303,7 @@ def api_tasks_log(name: str):
 
 # ─── 每日排程背景 daemon（APScheduler BackgroundScheduler）────────
 _scheduler_started = False
+_bg_scheduler = None  # 暴露給 /api/system/scheduler-status 取 next_run_time
 
 
 def start_scheduler_thread() -> None:
@@ -2054,11 +2312,12 @@ def start_scheduler_thread() -> None:
     這樣使用者只需開 `python web_ui/app.py`，就能自動每日 06:00 抓取。
     SCHEDULER_ENABLED=0 可關閉（例如多 worker 或獨立 scheduler process 情境）。
     """
-    global _scheduler_started
+    global _scheduler_started, _bg_scheduler
     if _scheduler_started:
         return
     if os.getenv("SCHEDULER_ENABLED", "1") == "0":
         print("[Scheduler] SCHEDULER_ENABLED=0，跳過啟動")
+        _scheduler_started = True
         return
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
@@ -2067,8 +2326,9 @@ def start_scheduler_thread() -> None:
         print("[Scheduler] 未安裝 APScheduler，跳過；pip install APScheduler>=3.10")
         return
 
-    # 重用 scheduler.py 定義的 job 函式
+    # 重用 scheduler.py 定義的 job 函式（已用 @_record decorator 包好）
     from scheduler import (
+        _record,
         job_compose_and_upload,
         job_fetch_and_score,
         job_generate_brief,
@@ -2084,6 +2344,7 @@ def start_scheduler_thread() -> None:
     sched.add_job(job_weekly_report, CronTrigger(day_of_week="mon", hour=9), id="weekly", name="週報")
 
     # AI 戰情室專用：每次抓取完成 30 分鐘後自動翻譯新增的 AI 新聞標題 + 摘要
+    @_record("translate")
     def _job_translate_ai_news():
         from loguru import logger
         try:
@@ -2099,6 +2360,7 @@ def start_scheduler_thread() -> None:
                   id="translate", name="翻譯 AI 新聞標題")
 
     # AI 戰情室專用：06:15 自動評分新爬的 AI 新聞、06:45 補做主題聚類
+    @_record("auto_score")
     def _job_auto_score():
         from loguru import logger
         try:
@@ -2108,6 +2370,7 @@ def start_scheduler_thread() -> None:
         except Exception as e:
             logger.warning(f"[Scheduler] 自動評分失敗：{e}")
 
+    @_record("cluster_recover")
     def _job_cluster_recover():
         from loguru import logger
         try:
@@ -2122,8 +2385,23 @@ def start_scheduler_thread() -> None:
     sched.add_job(_job_cluster_recover, CronTrigger(hour=6, minute=45),
                   id="cluster_recover", name="補做主題聚類")
 
+    # 06:55 — 類別總摘要（400-600 字，戰情室焦點新聞分節用）
+    @_record("category_summary")
+    def _job_category_summary():
+        from loguru import logger
+        try:
+            from modules.ai_war_room.category_summarizer import run as cat_run
+            r = cat_run()
+            logger.info(f"[Scheduler] 類別總摘要：{r}")
+        except Exception as e:
+            logger.warning(f"[Scheduler] 類別總摘要失敗：{e}")
+
+    sched.add_job(_job_category_summary, CronTrigger(hour=6, minute=55),
+                  id="category_summary", name="類別總摘要 400-600 字")
+
     sched.start()
     _scheduler_started = True
+    _bg_scheduler = sched
     print("[Scheduler] 已啟動（台灣時間）：06:00 爬取、06:15 自動評分、06:30 brief、06:45 補做聚類、07:00 翻譯、14:00 合成、22:00 數據、週一 09:00 週報")
 
 

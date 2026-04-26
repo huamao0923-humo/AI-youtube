@@ -2,4 +2,6 @@
 nixPkgs = ["python311"]
 
 [start]
-cmd = "gunicorn web_ui.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
+# 必須維持 workers=1，否則內嵌 BackgroundScheduler 會被多 worker 各自啟一份。
+# 雲端排程已拆到 worker process（scheduler.py）跑，web 端設 SCHEDULER_ENABLED=0 跳過內嵌排程。
+cmd = "gunicorn web_ui.app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120"

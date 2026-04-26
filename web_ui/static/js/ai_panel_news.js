@@ -139,6 +139,7 @@
       const more = bucket.length > sec.limit
         ? `<div class="awr-news-section-more"><button class="awr-mini-btn" data-jump-feed="${sec.feed}">看全部 ${sec.name} (${bucket.length}) →</button></div>`
         : '';
+      const summary = renderCategorySummary(sec, bucket.length, st, isAdmin);
       return `
         <div class="awr-news-section">
           <div class="awr-news-section-title">
@@ -146,6 +147,7 @@
             <span class="nm">${sec.name}</span>
             <span class="cn">${bucket.length}</span>
           </div>
+          ${summary}
           <ul class="awr-news-list">${rows}</ul>
           ${more}
         </div>`;
@@ -154,11 +156,46 @@
     return renderHero(hero, st, isAdmin) + sectionsHtml;
   }
 
+  function renderCategorySummary(sec, newsCount, st, isAdmin) {
+    const cs = (st.categorySummaries || {})[sec.feed];
+    const rerunBtn = isAdmin
+      ? `<button class="awr-mini-btn awr-cat-rerun" data-feed="${sec.feed}">🔄 重生</button>`
+      : '';
+    if (!cs || !cs.summary_zh) {
+      return `
+        <div class="awr-cat-summary awr-cat-empty">
+          <div class="awr-cat-summary-head">
+            <span class="awr-cat-summary-label">📝 今日總結</span>
+            <span class="awr-cat-summary-meta">尚未生成（每天 06:55 自動跑）</span>
+            ${rerunBtn}
+          </div>
+          <div class="awr-cat-summary-body">
+            點右側「🔄 重生」立刻產出 400~600 字的繁中總結（會跑 30~120 秒）。
+          </div>
+        </div>`;
+    }
+    const word = cs.word_count || (cs.summary_zh || '').length;
+    const when = cs.generated_at ? H.fmtTime(cs.generated_at) : '';
+    return `
+      <div class="awr-cat-summary">
+        <div class="awr-cat-summary-head">
+          <span class="awr-cat-summary-label">📝 今日總結 · ${sec.name}</span>
+          <span class="awr-cat-summary-meta">${cs.news_count || 0} 則新聞 · ${word} 字 · ${when}</span>
+          ${rerunBtn}
+        </div>
+        <div class="awr-cat-summary-body">${H.escapeHtml(cs.summary_zh)}</div>
+      </div>`;
+  }
+
   function renderSingleFeed(items, st, isAdmin) {
     const hero = pickHero(items);
     const rest = items.filter(it => !hero || it.id !== hero.id);
     const rows = rest.map(it => renderRow(it, st, isAdmin, { showSummary: true })).join('');
-    return renderHero(hero, st, isAdmin) + `<ul class="awr-news-list">${rows}</ul>`;
+    // 單一 feed 模式下，從 SECTIONS 反查當前 feed 的 emoji/name
+    const sec = SECTIONS.find(s => s.feed === st.feed)
+      || { feed: st.feed, emoji: '📰', name: st.feed };
+    const summary = renderCategorySummary(sec, items.length, st, isAdmin);
+    return renderHero(hero, st, isAdmin) + summary + `<ul class="awr-news-list">${rows}</ul>`;
   }
 
   H.register({
@@ -201,6 +238,24 @@
         });
       });
 
+      // 「🔄 重生」類別摘要按鈕（admin only）
+      body.querySelectorAll('.awr-cat-rerun').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault(); e.stopPropagation();
+          if (btn.disabled) return;
+          btn.disabled = true;
+          const orig = btn.textContent;
+          btn.textContent = '⏳ 啟動中…';
+          const ok = await H.rerunCategorySummary(btn.dataset.feed);
+          if (!ok) {
+            btn.disabled = false;
+            btn.textContent = orig;
+          } else {
+            btn.textContent = '⏳ 60s 後更新';
+          }
+        });
+      });
+
       // mark / open
       body.querySelectorAll('[data-act="mark"]').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -211,12 +266,23 @@
         });
       });
       body.querySelectorAll('[data-act="open"]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
           e.preventDefault(); e.stopPropagation();
-          const f = document.createElement('form');
-          f.method = 'POST'; f.action = '/select';
-          f.innerHTML = `<input name="news_id" value="${btn.dataset.id}"><input name="angle" value="A">`;
-          document.body.appendChild(f); f.submit();
+          if (btn.disabled) return;
+          // 從同 row 裡找標題（hero 與 row2 都有 .awr-news-hero-title / .title）
+          const card = btn.closest('.awr-news-hero, .awr-news-row2, .awr-news-row');
+          const titleEl = card ? card.querySelector('.awr-news-hero-title, .title') : null;
+          const title = titleEl ? titleEl.textContent.trim() : ('#' + btn.dataset.id);
+          btn.disabled = true;
+          const orig = btn.textContent;
+          btn.textContent = '⏳';
+          const result = await H.selectNews(btn.dataset.id, title);
+          if (!result) {
+            btn.disabled = false;
+            btn.textContent = orig;
+          } else {
+            btn.textContent = '✓';
+          }
         });
       });
     },

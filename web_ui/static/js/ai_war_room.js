@@ -15,6 +15,8 @@ window.AiWarRoom = (function () {
     hideUsed: true,           // admin only
     usedSet: new Set(),       // news_id string set
     usedSlugMap: {},          // news_id → episode slug
+    categorySummaries: {},    // feed → { summary_zh, news_count, generated_at, ... }
+    categorySummariesDate: null,
   };
 
   const panels = [];
@@ -36,6 +38,45 @@ window.AiWarRoom = (function () {
     }
   }
 
+  async function _refreshCategorySummaries() {
+    try {
+      const r = await fetch('/api/ai/category-summaries');
+      if (!r.ok) return;
+      const d = await r.json();
+      state.categorySummaries = d.summaries || {};
+      state.categorySummariesDate = d.date;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async function rerunCategorySummary(feed) {
+    try {
+      const r = await fetch('/api/ai/category-summaries/run-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feed: feed || null, force: true }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) {
+        _showToast('啟動失敗：' + (d.error || r.status), 'error');
+        return false;
+      }
+      _showToast('已在背景啟動，30~120 秒後自動更新', 'success');
+      // 等 60 秒後 refresh 一次
+      setTimeout(() => {
+        _refreshCategorySummaries().then(() => {
+          const p = panels.find(x => x.id === 'panel-news');
+          if (p) _runPanel(p);
+        });
+      }, 60000);
+      return true;
+    } catch (e) {
+      _showToast('啟動失敗：' + e.message, 'error');
+      return false;
+    }
+  }
+
   async function _runPanel(p) {
     const root = document.getElementById(p.id);
     if (!root) return;
@@ -50,7 +91,7 @@ window.AiWarRoom = (function () {
   }
 
   async function refreshAll() {
-    await _refreshUsedSet();
+    await Promise.all([_refreshUsedSet(), _refreshCategorySummaries()]);
     // 平行刷所有 panel，互不阻塞
     panels.forEach(_runPanel);
   }
@@ -115,6 +156,96 @@ window.AiWarRoom = (function () {
     } catch (e) { return false; }
   }
 
+  function _showToast(msg, kind) {
+    kind = kind || 'success';
+    let stack = document.getElementById('toast-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'toast-stack';
+      stack.className = 'toast-stack';
+      document.body.appendChild(stack);
+    }
+    const icon = { success: '✓', info: 'ℹ', warn: '⚠', error: '✕' }[kind] || 'ℹ';
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + kind;
+    el.innerHTML = '<span class="toast-icon">' + icon + '</span><div class="toast-body"></div><button class="toast-close" type="button">×</button>';
+    el.querySelector('.toast-body').textContent = msg;
+    el.querySelector('.toast-close').addEventListener('click', () => el.remove());
+    stack.appendChild(el);
+    setTimeout(() => { el.classList.add('toast-out'); setTimeout(() => el.remove(), 250); }, 4500);
+  }
+
+  /**
+   * 從戰情室選題建立 Episode（topic_id 模式）。
+   * 成功後不離開頁面，更新右側 sidepanel + 標記 used。
+   */
+  async function selectTopic(topicId, title) {
+    const ok = await confirmModal({
+      title: '建立新集',
+      body: `將以「<b>${escapeHtml(title || ('topic ' + topicId))}</b>」建立新集，<br>之後可在「製作集數」追蹤進度。`,
+      confirmText: '建立',
+      icon: '🎬',
+    });
+    if (!ok) return false;
+    try {
+      const fd = new FormData();
+      fd.append('topic_id', String(topicId));
+      const r = await fetch('/select-topic', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+        body: fd,
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        _showToast('建立失敗：' + (data.error || r.status), 'error');
+        return false;
+      }
+      _showToast('已開集：' + (data.title || data.slug), 'success');
+      if (window.AwrSelected) window.AwrSelected.refresh();
+      // refresh trending panel 把該 topic 標 used
+      _refreshUsedSet().then(() => panels.forEach(_runPanel));
+      return data;
+    } catch (e) {
+      _showToast('建立失敗：' + e.message, 'error');
+      return false;
+    }
+  }
+
+  /**
+   * 從戰情室選題建立 Episode（news_id 模式，焦點新聞用）。
+   */
+  async function selectNews(newsId, title) {
+    const ok = await confirmModal({
+      title: '建立新集',
+      body: `將以新聞「<b>${escapeHtml(title || ('#' + newsId))}</b>」建立新集。`,
+      confirmText: '建立',
+      icon: '🎬',
+    });
+    if (!ok) return false;
+    try {
+      const fd = new FormData();
+      fd.append('news_id', String(newsId));
+      fd.append('angle', 'A');
+      const r = await fetch('/select', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+        body: fd,
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        _showToast('建立失敗：' + (data.error || r.status), 'error');
+        return false;
+      }
+      _showToast('已開集：' + (data.title || data.slug), 'success');
+      if (window.AwrSelected) window.AwrSelected.refresh();
+      _refreshUsedSet().then(() => panels.forEach(_runPanel));
+      return data;
+    } catch (e) {
+      _showToast('建立失敗：' + e.message, 'error');
+      return false;
+    }
+  }
+
   // utilities exposed for panels
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -131,5 +262,5 @@ window.AiWarRoom = (function () {
     return iso.slice(0, 10);
   }
 
-  return { register, init, refreshAll, state, markNewsUsed, escapeHtml, fmtTime };
+  return { register, init, refreshAll, state, markNewsUsed, selectTopic, selectNews, rerunCategorySummary, escapeHtml, fmtTime };
 })();

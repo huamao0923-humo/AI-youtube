@@ -19,59 +19,54 @@
 
     <nav class="sidebar-nav">
       <div class="nav-group">
-        <div class="nav-group-label">主流程</div>
-        <a href="/" class="nav-link {% if active == 'dashboard' %}active{% endif %}">
-          <span class="nav-icon">🏠</span>儀表板
-        </a>
-        <a href="/today" class="nav-link {% if active == 'index' %}active{% endif %}">
-          <span class="nav-icon">🎯</span>今日嚴選
-          {% if stats and stats.unscored > 0 %}
-          <span class="nav-badge">{{ stats.unscored }}</span>
-          {% endif %}
+        <div class="nav-group-label">今日工作</div>
+        <a href="/admin/ai-war-room" class="nav-link {% if active == 'ai_war_room' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-action">④</span>
+          <span class="nav-icon">🤖</span>戰情室 · 選題
         </a>
         <a href="/episodes" class="nav-link {% if active == 'episodes' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-action">⑤</span>
           <span class="nav-icon">🎬</span>製作集數
         </a>
         <a href="/script" class="nav-link {% if active == 'script' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-action">⑥</span>
           <span class="nav-icon">📝</span>腳本審閱
+        </a>
+        <a href="/report" class="nav-link {% if active == 'report' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-action">⑦</span>
+          <span class="nav-icon">📊</span>上傳與數據
         </a>
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">新聞管理</div>
-        <a href="/news" class="nav-link {% if active == 'news' %}active{% endif %}">
-          <span class="nav-icon">📰</span>新聞工作台
+        <div class="nav-group-label">資料流監控</div>
+        <a href="/all-news" class="nav-link {% if active == 'all_news' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-auto">①</span>
+          <span class="nav-icon">📡</span>新聞池
+        </a>
+        <a href="/scoring" class="nav-link {% if active == 'scoring' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-auto">②</span>
+          <span class="nav-icon">⭐</span>評分（自動）
           {% if stats and stats.unscored > 0 %}
           <span class="nav-badge">{{ stats.unscored }}</span>
           {% endif %}
         </a>
-        <a href="/scoring" class="nav-link nav-sublink {% if active == 'scoring' %}active{% endif %}">
-          <span class="nav-icon">①</span>評分
-          {% if stats and stats.unscored > 0 %}
-          <span class="nav-badge">{{ stats.unscored }}</span>
-          {% endif %}
-        </a>
-        <a href="/topics" class="nav-link nav-sublink {% if active == 'topics' %}active{% endif %}">
-          <span class="nav-icon">②</span>聚類
+        <a href="/topics" class="nav-link {% if active == 'topics' %}active{% endif %}">
+          <span class="nav-step-badge nav-step-auto">③</span>
+          <span class="nav-icon">🧩</span>聚類
           {% if stats and stats.open_topics %}
           <span class="nav-badge">{{ stats.open_topics }}</span>
           {% endif %}
         </a>
-        <a href="/all-news" class="nav-link nav-sublink {% if active == 'all_news' %}active{% endif %}">
-          <span class="nav-icon">📡</span>新聞池
-        </a>
-        <a href="/news-dates" class="nav-link nav-sublink {% if active == 'news_dates' %}active{% endif %}">
-          <span class="nav-icon">🗂️</span>爬蟲日誌
-        </a>
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">分析與系統</div>
-        <a href="/admin/ai-war-room" class="nav-link {% if active == 'ai_war_room' %}active{% endif %}">
-          <span class="nav-icon">🤖</span>AI 戰情室
+        <div class="nav-group-label">系統</div>
+        <a href="/" class="nav-link {% if active == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">🏠</span>儀表板
         </a>
-        <a href="/report" class="nav-link {% if active == 'report' %}active{% endif %}">
-          <span class="nav-icon">📊</span>週報
+        <a href="/news-dates" class="nav-link {% if active == 'news_dates' %}active{% endif %}">
+          <span class="nav-icon">🗂️</span>爬蟲日誌
         </a>
         <a href="/logs" class="nav-link {% if active == 'logs' %}active{% endif %}">
           <span class="nav-icon">📋</span>系統日誌
@@ -79,14 +74,26 @@
         <a href="/setup" class="nav-link {% if active == 'setup' %}active{% endif %}">
           <span class="nav-icon">⚙️</span>系統設定
         </a>
-        <a href="/refresh" class="nav-link">
-          <span class="nav-icon">🔄</span>重新爬蟲
-        </a>
       </div>
+
+      <details class="nav-group nav-group-cowork">
+        <summary class="nav-group-label cowork-summary">
+          <span>備援與舊頁</span>
+        </summary>
+        <a href="/today" class="nav-link {% if active == 'index' %}active{% endif %}">
+          <span class="nav-icon">🎯</span>今日嚴選（精簡）
+        </a>
+        <a href="/news" class="nav-link {% if active == 'news' %}active{% endif %}">
+          <span class="nav-icon">📰</span>新聞工作台
+        </a>
+        <a href="/refresh" class="nav-link">
+          <span class="nav-icon">🔄</span>立即重新爬蟲
+        </a>
+      </details>
 
       <details class="nav-group nav-group-cowork" {% if cowork_alert %}open{% endif %}>
         <summary class="nav-group-label cowork-summary">
-          <span>{% if cowork_alert %}⚠️ {% endif %}CoWork 備援</span>
+          <span>{% if cowork_alert %}⚠️ {% endif %}CoWork 手動模式</span>
           {% if cowork_alert %}<span class="cowork-badge">!</span>{% endif %}
         </summary>
         {% if cowork_alert and cowork_alert_msg %}

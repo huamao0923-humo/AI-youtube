@@ -68,8 +68,17 @@
       ? `<ul class="awr-news-list">${newsList}</ul>`
       : `<div class="awr-empty">無相關新聞</div>`;
 
+    const isAdmin = (H.state && H.state.mode === 'admin');
+    const usedKey = 'topic_' + t.slug;
+    const isUsed = H.state && H.state.usedSet && H.state.usedSet.has(usedKey);
+    const selectBtn = (isAdmin && !isUsed)
+      ? `<button class="awr-btn awr-btn-primary awr-btn-select"
+                 data-topic-id="${t.topic_id}"
+                 data-title="${esc(t.title)}">🎬 選為本集題目</button>`
+      : (isUsed ? '<span class="awr-btn awr-btn-secondary" style="opacity:.5;cursor:default">已開集</span>' : '');
     const actions = `
       <div class="awr-detail-actions">
+        ${selectBtn}
         <a class="awr-btn awr-btn-secondary" href="/topic/${encodeURIComponent(t.slug)}" target="_blank" rel="noopener">📂 完整詳情</a>
       </div>`;
 
@@ -150,9 +159,27 @@
             toggle.textContent = '▼';
           }
         });
-        // detail 內的 <a> 不冒泡 toggle
+        // detail 內的 <a> 與 button 不冒泡 toggle
         wrap.addEventListener('click', (e) => {
-          if (e.target.closest('a')) e.stopPropagation();
+          if (e.target.closest('a') || e.target.closest('button')) e.stopPropagation();
+        });
+      });
+
+      // 「🎬 選為本集題目」按鈕
+      body.querySelectorAll('.awr-btn-select').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault(); e.stopPropagation();
+          if (btn.disabled) return;
+          btn.disabled = true;
+          const orig = btn.textContent;
+          btn.textContent = '⏳ 建立中…';
+          const result = await H.selectTopic(parseInt(btn.dataset.topicId, 10), btn.dataset.title);
+          if (!result) {
+            btn.disabled = false;
+            btn.textContent = orig;
+          } else {
+            btn.textContent = '✓ 已開集';
+          }
         });
       });
 

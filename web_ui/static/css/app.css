@@ -1956,3 +1956,115 @@ section.section h2 {
 .nav-sublink.active {
   opacity: 1;
 }
+
+/* ── Sidebar 步驟徽章 ─────────────────────────── */
+.nav-step-badge {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.nav-step-auto {
+  background: var(--surface2, #1f2937);
+  color: var(--text3, #8a95a3);
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+}
+.nav-step-action {
+  background: var(--accent-glow, rgba(78,161,255,0.18));
+  color: var(--accent2, #4ea1ff);
+  border: 1px solid var(--accent2, #4ea1ff);
+}
+
+/* ── 評分頁：自動模式狀態卡片 ──────────────────── */
+.scoring-status-card {
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.scoring-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.scoring-status-cell {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.scoring-status-cell .lbl {
+  font-size: 11px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.scoring-status-cell .val {
+  font-family: var(--font-mono, 'JetBrains Mono', Consolas, monospace);
+  font-size: 22px; font-weight: 700; line-height: 1.1;
+}
+.scoring-status-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 18px;
+  font-size: 12px;
+  color: var(--text2);
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.scoring-status-meta .lbl {
+  color: var(--text3); margin-right: 4px;
+}
+.scoring-status-meta .mono {
+  font-family: var(--font-mono, 'JetBrains Mono', Consolas, monospace);
+}
+.ss-warning {
+  grid-column: 1 / -1;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  color: #fbbf24;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.scoring-status-actions {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding-top: 10px;
+}
+
+/* ── 評分頁：CoWork 備援摺疊區 ──────────────────── */
+.cowork-fallback {
+  margin: 14px 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cowork-fallback > summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text2);
+  list-style: none;
+}
+.cowork-fallback > summary::-webkit-details-marker { display: none; }
+.cowork-fallback > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform .15s;
+  color: var(--text3);
+}
+.cowork-fallback[open] > summary::before { transform: rotate(90deg); }
+.cowork-fallback[open] {
+  border-style: solid;
+}
+.cowork-fallback-body {
+  padding: 4px 18px 18px;
+}
+.cowork-fallback-desc {
+  font-size: 12px; color: var(--text3);
+  line-height: 1.7; margin-bottom: 12px;
+}

@@ -10,8 +10,8 @@
 <div class="awr" data-mode="admin">
   <div class="awr-header">
     <div>
-      <h1 class="awr-title"><span class="emoji">🤖</span>AI 戰情室</h1>
-      <div class="awr-sub">美系前沿實驗室 · 雲端 / 晶片巨頭 · 研究社群</div>
+      <h1 class="awr-title"><span class="emoji">🤖</span>AI 戰情室 · 選題</h1>
+      <div class="awr-sub">每日 06:00 自動跑完爬取/評分/聚類，下面卡片直接點「🎬 選為本集題目」</div>
     </div>
     <div class="awr-controls">
       <button class="awr-btn awr-window active" data-window="24h">24H</button>
@@ -21,6 +21,30 @@
       </label>
       <button class="awr-btn" id="awr-refresh" title="立即重新整理">🔄</button>
     </div>
+  </div>
+
+  <!-- 今日節奏條 -->
+  <div class="awr-pipeline-bar" id="awr-pipeline-bar">
+    <div class="awr-pipeline-step" data-step="fetch">
+      <span class="step-num">①</span><span class="step-name">爬取</span>
+      <span class="step-status" data-role="status">—</span>
+    </div>
+    <div class="awr-pipeline-arrow">→</div>
+    <div class="awr-pipeline-step" data-step="auto_score">
+      <span class="step-num">②</span><span class="step-name">評分</span>
+      <span class="step-status" data-role="status">—</span>
+    </div>
+    <div class="awr-pipeline-arrow">→</div>
+    <div class="awr-pipeline-step" data-step="cluster_recover">
+      <span class="step-num">③</span><span class="step-name">聚類</span>
+      <span class="step-status" data-role="status">—</span>
+    </div>
+    <div class="awr-pipeline-arrow">→</div>
+    <div class="awr-pipeline-step active" data-step="select">
+      <span class="step-num">④</span><span class="step-name">等待選題</span>
+      <span class="step-status" data-role="status" id="awr-pipeline-pending-count">—</span>
+    </div>
+    <div class="awr-pipeline-warn" id="awr-pipeline-warn" style="display:none"></div>
   </div>
 
   <div class="awr-grid">
@@ -77,6 +101,18 @@
       <div class="awr-panel-body"><div class="awr-loading">載入中…</div></div>
     </section>
   </div>
+
+  <!-- 右側浮動：今日已選 -->
+  <aside class="awr-side-selected" id="awr-selected-today">
+    <div class="awr-side-head">
+      <span class="awr-side-title">🎬 今日已選</span>
+      <span class="awr-side-count" id="awr-selected-count">0</span>
+      <button class="awr-side-toggle" id="awr-side-toggle" title="收合 / 展開">−</button>
+    </div>
+    <ul class="awr-side-list" id="awr-selected-list">
+      <li class="awr-side-empty">尚未選題 — 從下方熱度榜或焦點新聞點「🎬 選為本集題目」</li>
+    </ul>
+  </aside>
 </div>
 {% endblock %}
 
@@ -88,5 +124,6 @@
 <script src="/static/js/ai_panel_companies.js"></script>
 <script src="/static/js/ai_panel_trending.js"></script>
 <script src="/static/js/ai_panel_models.js"></script>
+<script src="/static/js/ai_war_room_selected.js"></script>
 <script>AiWarRoom.init();</script>
 {% endblock %}

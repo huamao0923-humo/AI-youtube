@@ -11,7 +11,7 @@ from typing import Any, Iterable
 
 from .models import (
     NewsItem, Episode, PipelineStatus, EpisodeStatus, DailyBrief, ScriptRecord,
-    Topic, SessionLocal, init_db
+    Topic, SchedulerRun, DailyCategorySummary, SessionLocal, init_db
 )
 
 
@@ -62,12 +62,22 @@ def insert_news_batch(items: Iterable[dict[str, Any]]) -> int:
     return inserted
 
 
-def fetch_news_to_score(limit: int = 100) -> list[dict[str, Any]]:
+def fetch_news_to_score(limit: int = 100, only_ai: bool = True) -> list[dict[str, Any]]:
+    """撈待評分新聞。
+
+    Args:
+      only_ai: 預設 True，只撈 is_ai=1（AI 相關新聞）。
+               非 AI 新聞不會做 YouTube 影片，所以預設不評。
+               傳 False 可繞過該過濾（特殊情境如全量重評）。
+    """
     with get_session() as s:
+        q = s.query(NewsItem).filter(
+            NewsItem.ai_score.is_(None), NewsItem.status == "new"
+        )
+        if only_ai:
+            q = q.filter(NewsItem.is_ai == 1)
         rows = (
-            s.query(NewsItem)
-            .filter(NewsItem.ai_score.is_(None), NewsItem.status == "new")
-            .order_by(NewsItem.source_priority.desc(), NewsItem.local_score.desc())
+            q.order_by(NewsItem.source_priority.desc(), NewsItem.local_score.desc())
             .limit(limit)
             .all()
         )
@@ -366,11 +376,15 @@ def delete_news_by_date(date_str: str) -> int:
         return count
 
 
-def get_unscored_count() -> int:
+def get_unscored_count(only_ai: bool = True) -> int:
+    """未評分新聞數。預設只算 is_ai=1（給 sidebar 徽章用）。"""
     with get_session() as s:
-        return s.query(NewsItem).filter(
+        q = s.query(NewsItem).filter(
             NewsItem.ai_score.is_(None), NewsItem.status == "new"
-        ).count()
+        )
+        if only_ai:
+            q = q.filter(NewsItem.is_ai == 1)
+        return q.count()
 
 
 def get_news_by_date(date_str: str, status_filter: list[str] | None = None) -> list[dict[str, Any]]:
@@ -383,14 +397,17 @@ def get_news_by_date(date_str: str, status_filter: list[str] | None = None) -> l
         return [_row_to_dict(r) for r in rows]
 
 
-def get_today_unprocessed_count() -> int:
-    """今日抓取且 status='new'（未評分）的數量，用於徽章。"""
+def get_today_unprocessed_count(only_ai: bool = True) -> int:
+    """今日抓取且 status='new'（未評分）的數量，用於徽章。預設只算 is_ai=1。"""
     today = tw_today()
     with get_session() as s:
-        return s.query(NewsItem).filter(
+        q = s.query(NewsItem).filter(
             NewsItem.fetched_at.like(f"{today}%"),
-            NewsItem.status == "new"
-        ).count()
+            NewsItem.status == "new",
+        )
+        if only_ai:
+            q = q.filter(NewsItem.is_ai == 1)
+        return q.count()
 
 
 # ───────────── Script Record ─────────────
@@ -450,9 +467,11 @@ def stats_today() -> dict[str, Any]:
         total = s.query(NewsItem).count()
         candidates = s.query(NewsItem).filter_by(status="candidate").count()
         selected = s.query(NewsItem).filter_by(status="selected").count()
+        # 待評分只算 AI 新聞（非 AI 新聞不做 YouTube 影片）
         today_unprocessed = s.query(NewsItem).filter(
             NewsItem.fetched_at.like(f"{today}%"),
-            NewsItem.status == "new"
+            NewsItem.status == "new",
+            NewsItem.is_ai == 1,
         ).count()
     status = get_pipeline_status(today)
     return {
@@ -702,7 +721,11 @@ def dashboard_stats(date: str | None = None) -> dict[str, Any]:
         total_today = s.query(NewsItem).filter(
             NewsItem.fetched_at.like(f"{target_date}%")
         ).count()
-        unscored = s.query(NewsItem).filter(NewsItem.ai_score.is_(None)).count()
+        # 待評分只算 AI 新聞
+        unscored = s.query(NewsItem).filter(
+            NewsItem.ai_score.is_(None),
+            NewsItem.is_ai == 1,
+        ).count()
         candidates = s.query(NewsItem).filter(NewsItem.status == "candidate").count()
         active_episodes = s.query(EpisodeStatus).filter(
             EpisodeStatus.stage.notin_(["idle", "done"])
@@ -745,6 +768,96 @@ def dashboard_stats(date: str | None = None) -> dict[str, Any]:
         "stage_counts": stage_counts,
         "category_counts": category_counts,
     }
+
+
+# ───────────── Scheduler 健康檢查（Phase B 新增） ─────────────
+
+def record_scheduler_run(job_id: str, success: bool = True,
+                          error_msg: str | None = None,
+                          duration_ms: int = 0) -> None:
+    """記錄一次排程任務的執行結果（每 job 每次執行寫一筆）。"""
+    now = datetime.now(timezone.utc).isoformat()
+    with get_session() as s:
+        row = SchedulerRun(
+            job_id=job_id,
+            last_run=now,
+            success=bool(success),
+            error_msg=(error_msg or "")[:500] if error_msg else None,
+            duration_ms=int(duration_ms or 0),
+        )
+        s.add(row)
+
+
+def get_scheduler_runs() -> dict[str, dict[str, Any]]:
+    """回傳每個 job 最近一次的執行紀錄，鍵為 job_id。"""
+    from sqlalchemy import func
+    with get_session() as s:
+        # 先取每個 job_id 的最大 id（= 最新一筆）
+        sub = (
+            s.query(SchedulerRun.job_id, func.max(SchedulerRun.id).label("max_id"))
+            .group_by(SchedulerRun.job_id)
+            .subquery()
+        )
+        rows = (
+            s.query(SchedulerRun)
+            .join(sub, SchedulerRun.id == sub.c.max_id)
+            .all()
+        )
+        return {r.job_id: {
+            "last_run": r.last_run,
+            "success": bool(r.success),
+            "error_msg": r.error_msg,
+            "duration_ms": r.duration_ms or 0,
+        } for r in rows}
+
+
+# ───────────── 每日類別總摘要（Phase B 新增） ─────────────
+
+def save_category_summary(date: str, feed: str, summary_zh: str,
+                           news_count: int = 0,
+                           top_news_ids: list[int] | None = None) -> None:
+    """寫入或覆寫指定 (date, feed) 的類別摘要。"""
+    import json as _json
+    now = datetime.now(timezone.utc).isoformat()
+    word_count = len(summary_zh or "")
+    with get_session() as s:
+        row = (
+            s.query(DailyCategorySummary)
+            .filter_by(date=date, feed=feed)
+            .first()
+        )
+        if not row:
+            row = DailyCategorySummary(date=date, feed=feed)
+            s.add(row)
+        row.summary_zh = summary_zh
+        row.news_count = int(news_count or 0)
+        row.top_news_ids = _json.dumps(top_news_ids or [], ensure_ascii=False)
+        row.word_count = word_count
+        row.generated_at = now
+
+
+def load_category_summaries(date: str | None = None) -> dict[str, dict[str, Any]]:
+    """取指定日期的全部類別摘要，鍵為 feed。"""
+    import json as _json
+    if not date:
+        date = tw_today()
+    out: dict[str, dict[str, Any]] = {}
+    with get_session() as s:
+        rows = s.query(DailyCategorySummary).filter_by(date=date).all()
+        for r in rows:
+            try:
+                top_ids = _json.loads(r.top_news_ids or "[]")
+            except Exception:
+                top_ids = []
+            out[r.feed] = {
+                "feed": r.feed,
+                "summary_zh": r.summary_zh,
+                "news_count": r.news_count or 0,
+                "word_count": r.word_count or 0,
+                "top_news_ids": top_ids,
+                "generated_at": r.generated_at,
+            }
+    return out
 
 
 if __name__ == "__main__":
